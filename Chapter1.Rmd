@@ -1,5 +1,5 @@
 ---
-title: "TimeSeriesAnalysisAnApplications"
+title: "Applied Regression With R"
 author: "Bruce Campbell"
 date: "July 17, 2017"
 output: pdf_document
