@@ -1,0 +1,29 @@
+---
+title: "TimeSeriesAnalysisAnApplications"
+author: "Bruce Campbell"
+date: "July 17, 2017"
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=TRUE)
+```
+
+`r date()`
+
+
+```{r}
+install.packages("devtools")     # only need to do this once
+devtools::install_github("nickpoison/astsa")
+
+```
+
