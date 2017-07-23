@@ -1,0 +1,184 @@
+---
+title: "Applied Regression With R"
+author: "Bruce Campbell"
+date: "July 17, 2017"
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=TRUE)
+knitr::opts_knit$set(root.dir = "C:/E/AppliedRegressionWithR")
+```
+
+`r date()`
+
+
+## Chapter 1 examples
+```{r}
+if(!require(faraway)){
+    install.packages("faraway")
+    library(faraway)
+}
+
+if(!require(HistData)){
+    install.packages("HistData")
+    library(HistData)
+}
+```
+
+##Diabetes survey on Pima Indians
+
+The National Institute of Diabetes and Digestive and Kidney Diseases conducted a study on 768 adult female Pima Indians living near Phoenix.
+```{r}
+#Loads or lists available datasets
+data(pima, package="faraway")
+head(pima)
+summary(pima)
+#From the summary - we see that we have zero's for physical variable
+#We set them to NA - this is an important part ot due diligence in statistics
+#Check that the values make sense. 
+#sort(pima$diastolic)
+pima$diastolic[pima$diastolic == 0]  <- NA
+pima$glucose[pima$glucose == 0] <- NA
+pima$triceps[pima$triceps == 0]  <- NA
+pima$insulin[pima$insulin == 0] <- NA
+pima$bmi[pima$bmi == 0] <- NA
+pima$test <- factor(pima$test)
+summary(pima$test)
+levels(pima$test) <- c("negative","positive")
+summary(pima)
+hist(pima$diastolic,xlab="Diastolic",main="")
+plot(density(pima$diastolic,na.rm=TRUE),main="")
+plot(sort(pima$diastolic),ylab="Sorted Diastolic")
+plot(diabetes ~ diastolic,pima)
+plot(diabetes ~ test,pima)
+require(ggplot2)
+ggplot(pima,aes(x=diastolic))+geom_histogram()
+ggplot(pima,aes(x=diastolic))+geom_density()
+ggplot(pima,aes(x=diastolic,y=diabetes))+geom_point()
+ggplot(pima,aes(x=diastolic,y=diabetes,shape=test))+geom_point()+theme(legend.position = "top", legend.direction = "horizontal")
+ggplot(pima,aes(x=diastolic,y=diabetes)) + geom_point(size=1) + facet_grid(~ test)
+```
+
+
+##Marks in a statistics class
+
+Marks from Statistics 500 one year at the University of Michigan
+
+```{r}
+data(stat500)
+stat500 <- data.frame(scale(stat500))
+plot(final ~ midterm,stat500)
+abline(0,1)
+g <- lm(final ~ midterm,stat500)
+abline(coef(g),lty=5)
+cor(stat500)
+```
+##Mayer's 1750 data on the Manilius crater on the moon
+
+In 1750, Tobias Mayer collected data on various landmarks on the moon in order to determine its orbit. The data involving the position of the Manilius crater resulted in a least squares like problem. The example is discussed in Steven Stigler's History of Statistics
+```{r}
+data(manilius, package="faraway")
+head(manilius)
+(moon3 <- aggregate(manilius[,1:3],list(manilius$group), sum))
+solve(cbind(9,moon3$sinang,moon3$cosang), moon3$arc)
+lmod <- lm(arc ~ sinang + cosang, manilius)
+coef(lmod)
+
+data(GaltonFamilies, package="HistData")
+plot(childHeight ~ midparentHeight, GaltonFamilies)
+lmod <- lm(childHeight ~ midparentHeight, GaltonFamilies)
+coef(lmod)
+abline(lmod)
+(beta <- with(GaltonFamilies, cor(midparentHeight, childHeight) * sd(childHeight) / sd(midparentHeight)))
+(alpha <- with(GaltonFamilies, mean(childHeight) - beta * mean(midparentHeight)))
+(beta1 <- with(GaltonFamilies, sd(childHeight) / sd(midparentHeight)))
+(alpha1 <- with(GaltonFamilies, mean(childHeight) - beta1 * mean(midparentHeight)))
+abline(alpha1, beta1, lty=2)
+```
+
+
+# Homework Chapter 1
+
+
+We're asked to make numerical and graphical summaries of a variety of datasets. We are instructed to limit the output to a quantity that abusy reader would find sufficient to get a basic understanding of the data. 
+
+- teengamb
+- uswages
+- prostate
+- sat
+- divusa
+
+
+
+##Study of teenage gambling in Britain
+
+The teengamb data frame has 47 rows and 5 columns. A survey was conducted to study teenage gambling in Britain.
+This frame contains the following columns:
+
+sex
+0=male, 1=female
+
+status
+Socioeconomic status score based on parents' occupation
+
+income
+in pounds per week
+
+verbal
+verbal score in words out of 12 correctly defined
+
+gamble
+expenditure on gambling in pounds per year
+```{r}
+data(teengamb, package = "faraway")
+
+head(teengamb)
+
+require(GGally)
+library(ggplot2)
+require(GGally)
+ggpairs(teengamb) + 
+  theme(axis.line=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank())
+
+```
+
+This data set is not well matched by sex so we'll be cautious in making inference on how sex influences gambling status.  At first glance we may be tempted to note that gambling values are higher for males, but this may be due to variability in the population of gamblers. 
+
+We do note that there is an association between income and gamble. Gamble and Income appear to be right skewed fat tailed distributions.
+
+Here we add LOESS and LM models to the pairs plots. LOESS is fitting by local polynomial regression.
+```{r}
+
+
+my_fn <- function(data, mapping, method="loess", ...){
+      p <- ggplot(data = data, mapping = mapping) + 
+      geom_point() + 
+      geom_smooth(method=method, ...)
+      p
+    }
+
+# Default loess curve    
+ggpairs(teengamb, lower = list(continuous = my_fn))
+
+# Use wrap to add further arguments; change method to lm
+ggpairs(teengamb, lower = list(continuous = wrap(my_fn, method="lm")))
+
+
+```
+
+
+
+
