@@ -1,0 +1,163 @@
+---
+title: "Bruce Campell ST 503 HW 1"
+subtitle: "Problems 1,3 Chapter 2 Faraway, Julian J.. Linear Models with R, Second Edition (Chapman & Hall/CRC Texts in Statistical Science). CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+```
+
+`r date()`
+
+#Problem 1.1
+
+_The dataset teengamb concerns a study of teenage gambling in Britain. Make a numerical and graphical summary of the data, commenting on any features that you find interesting. Limit the output you present to a quantity that a busy reader would find sufficient to get a basic understanding of the data._
+
+This report was rendered in R Markdown with the option `echo=FALSE`.  We assume a busy reader does not want to see the code. 
+
+```{r}
+if(!require(faraway)){
+    install.packages("faraway")
+    library(faraway)
+}
+```
+
+##Load and inspect the data. 
+
+When loading and inspecting the data we will note which variables are numberic, and which are strings, we'll also be on the lookout for variables that we may want to encode as factors.  Here we note that gender is a candidate for such encoding.
+
+```{r}
+library(pander)
+library(ggplot2)
+library(GGally)
+data(teengamb, package="faraway")
+head(teengamb)
+```
+
+
+##Check for missing data
+
+```{r}
+pander(data.frame(missing.count =sum(is.na(teengamb))),caption="Number of missing elements in data set")
+```
+
+##Calculate summary statistics for the variables
+
+```{r}
+summary(teengamb)
+
+```
+
+##Plot the features
+
+This data come from a study of teenage gambpling in Britan.  The response vaiable in this case is gamble, and the other variables in the data set are candidates for predictors in any modelling we do. When creating plots, we'll be interested in how the predictors relate to the response.  We'll also be on the lookout for outliers. 
+
+```{r}
+ggpairs(teengamb,axisLabels ="none")
+
+```
+
+
+We note that gender seems to vary with gamble.  We can see this better in a box plot.
+
+```{r}
+
+teengamb.factormod <- teengamb
+
+teengamb.factormod$sex <-  factor(teengamb.factormod$sex, levels = c(1,0), labels =  c("female","male"))
+
+ggplot(aes( y=gamble, x=sex), data = teengamb.factormod) + geom_boxplot()
+
+```
+
+
+
+We also note that income seems to have an association with gambling.  
+
+
+```{r}
+
+p <-ggplot(teengamb.factormod,aes(x=income, y=gamble)) +geom_point()
+p+ geom_smooth(aes(x=income,y=gamble),method="lm")
+```
+
+We observe a data element with a large value of gamble.  This needs to be noted and considered when we evaluate any models that we fit with this data.
+
+
+#Problem 1.3
+
+_The dataset prostate is from a study on 97 men with prostate cancer who were due to receive a radical prostatectomy. Make a numerical and graphical summary of the data as in the first question._
+
+
+##Load and inspect the data from the 
+
+```{r}
+data(prostate, package="faraway")
+head(prostate)
+```
+
+We note that the documentation provides the following details the meaning of the features ;
+
+* lcavol=log(cancer volume)
+* lweight=log(prostate weight)
+* age=age
+* lbph=log(benign prostatic hyperplasia amount)
+* svi=seminal vesicle invasion
+* lcp=(capsular penetration)
+* gleason=leason score
+* pgg45=percentage Gleason scores 4 or 5
+* lpsa=log(prostate specific antigen)
+
+
+##Check for missing data
+
+```{r}
+pander(data.frame(missing.count =sum(is.na(prostate))),caption="Number of missing elements in data set")
+```
+
+We note that the gleason score might be a variable that is a candidate for encoding as a factor variable. 
+
+##Summary statistics for the prostate data
+
+```{r}
+summary(prostate)
+```
+
+##Plot of the variables for the prostate data
+
+```{r,fig.height=7, fig.width=7}
+ggpairs(prostate , axisLabels ="none")
+```
+
+
+We note a relationship between lcavol and lpsa, and between lcp and lpsa.  We also note that there is a replationship between the gleason score and lpsa and pgg45. 
+
+```{r}
+p <-ggplot(prostate,aes(x=lcavol, y=lpsa)) +geom_point()
+p+ geom_smooth(aes(x=lcavol,y=lpsa),method="lm")
+
+
+
+
+p <-ggplot(prostate,aes(x=lcp, y=lpsa)) +geom_point()
+p+ geom_smooth(aes(x=lcp,y=lpsa),method="lm")
+
+```
+We note that there are a number of lcp values at -1.39.  We should follow up with the study authors to undersand this better.  It may be due to limitations or constriants in instrumentation that was used to make the measurements.  
+
+
+

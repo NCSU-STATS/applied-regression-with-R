@@ -1,0 +1,165 @@
+---
+title: "Bruce Campell ST 503 HW 1"
+subtitle: "Problems 1,3 Chapter 2 Faraway, Julian J.. Linear Models with R, Second Edition (Chapman & Hall/CRC Texts in Statistical Science). CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=TRUE)
+knitr::opts_knit$set(root.dir = ".")
+```
+
+`r date()`
+
+#Problem 2.1
+
+_The dataset teengamb concerns a study of teenage gambling in Britain. Fit a regression model with the expenditure on gambling as the response and the sex, status, income and verbal score as predictors. Present the output._
+
+* (a) What percentage of variation in the response is explained by these predictors? 
+* (b) Which observation has the largest (positive) residual? Give the case number. 
+* (c) Compute the mean and median of the residuals. 
+* (d) Compute the correlation of the residuals with the fitted values. 
+* (e) Compute the correlation of the residuals with the income. 
+* (f) For all other predictors held constant, what would be the difference in predicted expenditure on gambling for a male compared to a female?
+
+```{r}
+if(!require(faraway)){
+    install.packages("faraway")
+    library(faraway)
+}
+```
+
+
+```{r}
+library(pander)
+library(ggplot2)
+library(GGally)
+data(teengamb, package="faraway")
+head(teengamb)
+
+ggpairs(teengamb)
+
+lm.fit <- lm(gamble ~ sex+status+income+verbal, data=teengamb)
+
+summary(lm.fit)
+
+#uncomment for diagnostic plots
+#plot(lm.fit)
+```
+
+### (a) What percentage of variation in the response is explained by these predictors? 
+
+Here we calculate the proportion of explained and unexplaned variace in the response that is given by the predictors in the mode we fit. 
+```{r}
+
+var.explained.proportion <-  summary(lm.fit)$r.squared
+var.unexplaned.proportion <- 1- summary(lm.fit)$r.squared
+
+pander(data.frame(var.explained.proportion= var.explained.proportion), caption="Explained")
+
+```
+
+
+### (b) Which observation has the largest (positive) residual? Give the case number.
+
+We're not sure if the question seeks the larges residual in absolute vaule or the largest of the positive residuals.  We suspect that we're looking for the largest residual in absolute values since this may be an outlier that needs investigation, but we'll report both. 
+
+```{r}
+plot(lm.fit$residuals)
+
+index.largest.pos.residual <- which.max(lm.fit$residuals)
+
+index.largest.abs.residual <- which.max(abs(lm.fit$residuals))
+
+```
+The largets residual occurs at index 24 of the dataframe.  This is the associated cases data.
+
+```{r}
+pander(teengamb[24,], caption = "Potential outlier.")
+```
+
+
+### (c) Compute the mean and median of the residuals. 
+
+```{r}
+residuals.mean <- mean(lm.fit$residuals)
+
+residuals.median <- median(lm.fit$residuals)
+
+pander(data.frame(residuals.mean=residuals.mean,residuals.median=residuals.median))
+
+hist(lm.fit$residuals,30)
+```
+
+The mean residual is a very small number! We'd need to think through the implications of this - possibly it is an artifact of data that was generated.
+
+### (d) Compute the correlation of the residuals with the fitted values. 
+```{r}
+corr.residuals.vs.fitted <- cor(lm.fit$residuals,lm.fit$fitted.values)
+pander(data.frame (corr.residuals.vs.fitted=corr.residuals.vs.fitted))
+```
+
+### (e) Compute the correlation of the residuals with the income. 
+```{r}
+corr.residuals.income <- cor(lm.fit$residuals,teengamb$income)
+pander(data.frame (corr.residuals.income=corr.residuals.income))
+```
+
+```{r}
+plot(lm.fit$residuals,teengamb$income)
+```
+
+### (f) For all other predictors held constant, what would be the difference in predicted expenditure on gambling for a male compared to a female?
+
+This should be the value of the coefficient for gender.  We need to be careful about the encoding and unerstanding whether this was treated as a factor in the regression. Querying the data `?teengamb` tells us that sex is encoded as so `0=male, 1=female`.  Looking at the data frame teengamb we see that the class of the variable is integer and not a factor so we can now interpret the coefficient properly. 
+
+
+```{r}
+
+gender.coefficient <- lm.fit$coefficients['sex']
+
+pander(data.frame(gender.coefficient=gender.coefficient))
+
+```
+This value represents the change in the response when there is a unit change in the predictor.  In this case since female is encoded as `1` we can say that females have that much less gamble response (less because the coefficient is negative).
+
+We can apply the model by hand to a element of the data set to see this in practice. 
+
+```{r}
+data.sample<- sample(nrow(teengamb),1)
+data.element <- teengamb[data.sample,]
+data.element$gamble <-NULL
+
+data.element <- as.matrix(cbind(intercept=1,data.element))
+beta.hat <- as.matrix( lm.fit$coefficients)
+
+pander(data.frame(data.element), caption ="Data sample")
+
+response.orig <- (data.element) %*% beta.hat    
+
+#change the gender of our data element 
+data.element[1,2] <- ifelse(data.element[1,2]==1, 0, 1)
+
+
+pander(data.frame(data.element), caption ="Data sample with gender modified")
+
+response.gendermod <- (data.element) %*% beta.hat
+
+
+pander(data.frame(response.difference = (response.orig- response.gendermod)))
+```
+
+
+

@@ -1,0 +1,130 @@
+---
+title: "Chapter 2 Problem 6 Faraway"
+subtitle: "Faraway, Julian J.. Linear Models with R, Second Edition (Chapman & Hall/CRC Texts in Statistical Science). CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   #expmain <- TeX('$x_t = cos(\\frac{2\\pi t}{4}) + w_t$');x = ts(cos(2*pi*0:500/4) + rnorm(500,0,1));plot(x,main =expmain )
+library(pander)
+library(ggplot2)
+library(ggplot2)
+library(GGally)
+```
+
+
+_Thirty samples of cheddar cheese were analyzed for their content of acetic acid, hydrogen sulfide and lactic acid. Each sample was tasted and scored by a panel of judges and the average taste score produced. Use the cheddar data to answer the following:_
+
+* (a) Fit a regression model with taste as the response and the three chemical contents as predictors. Report the values of the regression coefficients. 
+* (b) Compute the correlation between the fitted values and the response. Square it. Identify where this value appears in the regression output. 
+* (c) Fit the same regression model but without an intercept term. What is the value of R 2 reported in the output? Compute a more reasonable measure of the goodness of fit for this example.
+
+```{r,echo=FALSE}
+if(!require(faraway)){
+    install.packages("faraway")
+    library(faraway)
+}
+
+```
+ 
+## Fit the linear model $taste \sim Acetic + H2S + Lactic$
+
+First we load and inspect the data
+
+```{r, size="small"}
+data(cheddar, package="faraway")
+head(cheddar)
+
+ggpairs(data = cheddar)
+```
+
+Fit the model and display the regression coefficients
+```{r}
+lm.fit <- lm(taste ~ Acetic + H2S + Lactic, data=cheddar)
+
+summary(lm.fit)
+```
+
+Compute the correlation between the fitted values and the response. Square it. Identify where this value appears in the regression output. 
+```{r}
+
+yhat  <-lm.fit$fitted.values
+
+y <- cheddar$taste
+
+corr.fitted_response <- cor(yhat,y)
+
+pander(data.frame(r_sq =corr.fitted_response^2), caption ="Squared Correlation between actual and predicted")
+```
+
+The value we calculated is the multiple R-squared in the regression output. Note the adjusted R-squared is a modified version of R-squared that has been adjusted for the number of predictors in the model. We use the adjusted R-squared when comparing models -  it increases only if the new terms improve the model more than would be expected by chance.
+
+
+
+Diagnotic plots for this model - uncomment for display.
+
+```{r}
+#plot(lm.fit)
+```
+
+
+
+
+## Fit the model without an intercept term.
+
+In R a formula has an implied intercept term. To remove this use either $y \sim x - 1$ or $y \sim 0 + x$ in the formula.  For our case we will fit $taste \sim Acetic + H2S + Lactic -1$.  We'll need to account for the lack of intercept term when evaluating the quality of the fit.  The default $R^2$ calculation in R assumes a null model with an intercept.
+
+```{r}
+
+lm.fit.nointercept <- lm(taste ~ Acetic + H2S + Lactic- 1, data=cheddar)
+
+summary(lm.fit.nointercept)
+
+
+```
+
+The reported $R^2$ in this case is $0.8877$ We see the jump in calculated value that the textbook mentions. Now we'll calculate $R^2 = corr^2(y, \hat{y})$
+
+```{r}
+
+yhat  <-lm.fit.nointercept$fitted.values
+
+y <- cheddar$taste
+
+corr.fitted_response.nointercept <- cor(yhat,y)
+
+
+pander(data.frame(r_sq =corr.fitted_response.nointercept^2), caption = "Squared Correlation between actual and predicted")
+
+
+```
+
+We see this value is commensurate with the value we obtained when there was an intercept.  
+
+
+Diagnotic plots for this model - uncomment for display.
+
+```{r}
+
+#plot(lm.fit.nointercept)
+
+```
+
+
+
+
+
