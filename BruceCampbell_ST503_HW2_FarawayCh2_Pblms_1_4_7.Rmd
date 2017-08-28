@@ -1,0 +1,381 @@
+---
+title: "Bruce Campell ST 503 HW 1"
+subtitle: "Problems 1, 4, 7 Chapter 2 Faraway, Julian J. Linear Models with R, Second Edition. CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=TRUE)
+knitr::opts_knit$set(root.dir = ".")
+```
+
+`r date()`
+
+#Problem 2.1
+
+_The dataset teengamb concerns a study of teenage gambling in Britain. Fit a regression model with the expenditure on gambling as the response and the sex, status, income and verbal score as predictors. Present the output._
+
+* (a) What percentage of variation in the response is explained by these predictors? 
+* (b) Which observation has the largest (positive) residual? Give the case number. 
+* (c) Compute the mean and median of the residuals. 
+* (d) Compute the correlation of the residuals with the fitted values. 
+* (e) Compute the correlation of the residuals with the income. 
+* (f) For all other predictors held constant, what would be the difference in predicted expenditure on gambling for a male compared to a female?
+
+```{r}
+if(!require(faraway)){
+    install.packages("faraway")
+    library(faraway)
+}
+```
+
+
+```{r}
+library(pander)
+library(ggplot2)
+library(GGally)
+data(teengamb, package="faraway")
+head(teengamb)
+
+ggpairs(teengamb)
+
+lm.fit <- lm(gamble ~ sex+status+income+verbal, data=teengamb)
+
+summary(lm.fit)
+
+#uncomment for diagnostic plots
+#plot(lm.fit)
+```
+
+### (a) What percentage of variation in the response is explained by these predictors? 
+
+Here we calculate the proportion of explained and unexplaned variace in the response that is given by the predictors in the mode we fit. 
+```{r}
+
+var.explained.proportion <-  summary(lm.fit)$r.squared
+var.unexplaned.proportion <- 1- summary(lm.fit)$r.squared
+
+pander(data.frame(var.explained.proportion= var.explained.proportion), caption="Explained")
+
+```
+
+
+### (b) Which observation has the largest (positive) residual? Give the case number.
+
+We're not sure if the question seeks the larges residual in absolute vaule or the largest of the positive residuals.  We suspect that we're looking for the largest residual in absolute values since this may be an outlier that needs investigation, but we'll report both. 
+
+```{r}
+plot(lm.fit$residuals)
+
+index.largest.pos.residual <- which.max(lm.fit$residuals)
+
+index.largest.abs.residual <- which.max(abs(lm.fit$residuals))
+
+```
+The largets residual occurs at index 24 of the dataframe.  This is the associated cases data.
+
+```{r}
+pander(teengamb[24,], caption = "Potential outlier.")
+```
+
+
+### (c) Compute the mean and median of the residuals. 
+
+```{r}
+residuals.mean <- mean(lm.fit$residuals)
+
+residuals.median <- median(lm.fit$residuals)
+
+pander(data.frame(residuals.mean=residuals.mean,residuals.median=residuals.median))
+
+hist(lm.fit$residuals,30)
+```
+
+The mean residual is a very small number! We'd need to think through the implications of this - possibly it is an artifact of data that was generated.
+
+### (d) Compute the correlation of the residuals with the fitted values. 
+```{r}
+corr.residuals.vs.fitted <- cor(lm.fit$residuals,lm.fit$fitted.values)
+pander(data.frame (corr.residuals.vs.fitted=corr.residuals.vs.fitted))
+```
+
+### (e) Compute the correlation of the residuals with the income. 
+```{r}
+corr.residuals.income <- cor(lm.fit$residuals,teengamb$income)
+pander(data.frame (corr.residuals.income=corr.residuals.income))
+```
+
+```{r}
+plot(lm.fit$residuals,teengamb$income)
+```
+
+### (f) For all other predictors held constant, what would be the difference in predicted expenditure on gambling for a male compared to a female?
+
+This should be the value of the coefficient for gender.  We need to be careful about the encoding and unerstanding whether this was treated as a factor in the regression. Querying the data `?teengamb` tells us that sex is encoded as so `0=male, 1=female`.  Looking at the data frame teengamb we see that the class of the variable is integer and not a factor so we can now interpret the coefficient properly. 
+
+
+```{r}
+
+gender.coefficient <- lm.fit$coefficients['sex']
+
+pander(data.frame(gender.coefficient=gender.coefficient))
+
+```
+This value represents the change in the response when there is a unit change in the predictor.  In this case since female is encoded as `1` we can say that females have that much less gamble response (less because the coefficient is negative).
+
+We can apply the model by hand to a element of the data set to see this in practice. 
+
+```{r}
+data.sample<- sample(nrow(teengamb),1)
+data.element <- teengamb[data.sample,]
+data.element$gamble <-NULL
+
+data.element <- as.matrix(cbind(intercept=1,data.element))
+beta.hat <- as.matrix( lm.fit$coefficients)
+
+pander(data.frame(data.element), caption ="Data sample")
+
+response.orig <- (data.element) %*% beta.hat    
+
+#change the gender of our data element 
+data.element[1,2] <- ifelse(data.element[1,2]==1, 0, 1)
+
+
+pander(data.frame(data.element), caption ="Data sample with gender modified")
+
+response.gendermod <- (data.element) %*% beta.hat
+
+
+pander(data.frame(response.difference = (response.orig- response.gendermod)))
+```
+
+#Problem 2.4
+
+_The dataset prostate comes from a study on 97 men with prostate cancer who were due to receive a radical prostatectomy. Fit a model with lpsa as the response and lcavol as the predictor. Record the residual standard error and the $R^2$. Now add lweight, svi, lbph, age, lcp, pgg45 and gleason to the model one at a time. For each model record the residual standard error and the $R^2$. Plot the trends in these two statistics._
+
+
+## Load data and fit the models
+
+###Fit lpsa ~ lcavol +lweight 
+
+```{r}
+rm(list = ls())
+#This is a library from the "tidyverse" - we use it here to display the models neatly
+library(broom)
+
+data(prostate, package="faraway")
+
+#Make a data frame to hold the results 
+
+model.stats <- data.frame(num.predictors=integer() , r.squared=numeric(), residual.se=numeric(),model.string=character())
+
+lm.fit <- lm(lpsa ~ lcavol, data=prostate)
+
+#Dispaly both summaries for the first model
+summary(lm.fit)
+tidy(lm.fit)
+model.summary <- summary(lm.fit)
+
+r.squared <-  model.summary$r.squared
+residual.se <-model.summary$sigma
+model.string <- "lpsa ~ lcavol"
+
+model.stats <- rbind(list(num.predictors = 1,r.squared=r.squared,residual.se=residual.se,model.string=model.string),model.stats)
+
+#This is annoying the step above to add the element to the data frame 
+#converts the model.string to a factor even though we've specified that it's character when we created the dataframe. 
+model.stats$model.string <- as.character(model.stats$model.string)
+```
+
+
+###Fit lpsa ~ lcavol +lweight 
+
+```{r}
+
+lm.fit <- lm(lpsa ~ lcavol +lweight , data=prostate)
+
+tidy(lm.fit)
+
+model.summary <- summary(lm.fit)
+
+r.squared <-  model.summary$r.squared
+residual.se <-model.summary$sigma
+model.string <- "lpsa ~ lcavol +lweight"
+
+model.stats <- rbind(list(num.predictors = 2,r.squared=r.squared,residual.se=residual.se,model.string=model.string),model.stats)
+model.stats$model.string <- as.character(model.stats$model.string)
+```
+
+
+###Fit lpsa ~ lcavol +lweight + svi 
+
+```{r}
+
+lm.fit <- lm(lpsa ~ lcavol +lweight + svi , data=prostate)
+
+tidy(lm.fit)
+
+model.summary <- summary(lm.fit)
+
+r.squared <-  model.summary$r.squared
+residual.se <-model.summary$sigma
+model.string <- "lpsa ~ lcavol +lweight + svi"
+
+model.stats <- rbind(list(num.predictors = 3,r.squared=r.squared,residual.se=residual.se,model.string=model.string),model.stats)
+model.stats$model.string <- as.character(model.stats$model.string)
+
+```
+
+
+###Fit lpsa ~ lcavol +lweight + svi + lbph 
+
+```{r}
+
+lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph , data=prostate)
+
+tidy(lm.fit)
+
+model.summary <- summary(lm.fit)
+
+r.squared <-  model.summary$r.squared
+residual.se <-model.summary$sigma
+model.string <- "lpsa ~ lcavol +lweight + svi + lbph"
+
+model.stats <- rbind(list(num.predictors = 4,r.squared=r.squared,residual.se=residual.se,model.string=model.string),model.stats)
+model.stats$model.string <- as.character(model.stats$model.string)
+
+```
+
+###Fit lpsa ~ lcavol +lweight + svi + lbph + age 
+
+```{r}
+
+lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph + age , data=prostate)
+
+tidy(lm.fit)
+
+model.summary <- summary(lm.fit)
+
+r.squared <-  model.summary$r.squared
+residual.se <-model.summary$sigma
+model.string <- "lpsa ~ lcavol +lweight + svi + lbph + age"
+
+model.stats <- rbind(list(num.predictors = 5,r.squared=r.squared,residual.se=residual.se,model.string=model.string),model.stats)
+model.stats$model.string <- as.character(model.stats$model.string)
+```
+
+
+###Fit lpsa ~ lcavol +lweight + svi + lbph + age + lcp 
+
+```{r}
+
+lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph + age + lcp , data=prostate)
+
+tidy(lm.fit)
+
+model.summary <- summary(lm.fit)
+
+r.squared <-  model.summary$r.squared
+residual.se <-model.summary$sigma
+model.string <- "lpsa ~ lcavol +lweight + svi + lbph + age + lcp"
+
+model.stats <- rbind(list(num.predictors = 6,r.squared=r.squared,residual.se=residual.se,model.string=model.string),model.stats)
+model.stats$model.string <- as.character(model.stats$model.string)
+```
+
+
+###Fit lpsa ~ lcavol +lweight + svi + lbph + age + lcp + pgg45
+
+```{r}
+
+lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph + age + lcp + pgg45, data=prostate)
+
+tidy(lm.fit)
+
+model.summary <- summary(lm.fit)
+
+r.squared <-  model.summary$r.squared
+residual.se <-model.summary$sigma
+model.string <- "lpsa ~ lcavol +lweight + svi + lbph + age + lcp + pgg45"
+
+model.stats <- rbind(list(num.predictors = 7,r.squared=r.squared,residual.se=residual.se,model.string=model.string),model.stats)
+model.stats$model.string <- as.character(model.stats$model.string)
+```
+
+###Fit lpsa ~ lcavol +lweight + svi + lbph + age + lcp + pgg45+ gleason
+
+```{r}
+lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph + age + lcp + pgg45+ gleason, data=prostate)
+
+tidy(lm.fit)
+
+model.summary <- summary(lm.fit)
+
+r.squared <-  model.summary$r.squared
+residual.se <-model.summary$sigma
+model.string <- "lpsa ~ lcavol +lweight + svi + lbph + age + lcp + pgg45+ gleason"
+
+model.stats <- rbind(list(num.predictors = 8,r.squared=r.squared,residual.se=residual.se,model.string=model.string),model.stats)
+model.stats$model.string <- as.character(model.stats$model.string)
+
+```
+
+## Present the model stats 
+
+```{r}
+rownames(model.stats) <- NULL
+pander(model.stats, caption = "model statistics")
+```
+
+##Plot $SE$ versus $R^2$
+
+```{r}
+p<-ggplot(model.stats, aes(x=residual.se,y=r.squared)) + geom_point() 
+p<- p+ geom_text(aes(label=num.predictors, num.predictors="red", hjust=1, vjust=1))
+p + ggtitle("residual versus rsquared with num predictors indicated")
+```
+
+We see that generally the proportion of variance explained by the model increases and the residual standard error decreases as the dimension of the model inreases. The effect becomes less pronounced as we get to 6+ predictors. One could argue that inclusion of gleason to the model does not add much explanatory power.  This may make empirical sense since the gleason score is assigned by a pathologits based on a stained tissue slide.  It could be the case that this feature merley summarises the biochemical variables.   
+
+
+# Problem 2.7
+
+_An experiment was conducted to determine the effect of four factors on the resistivity of a semiconductor wafer. The data is found in wafer where each of the four factors is coded as ??? or + depending on whether the low or the high setting for that factor was used. Fit the linear model resist ??? x1 + x2 + x3 + x4._
+
+```{r}
+rm(list = ls())
+data(wafer, package="faraway")
+
+print("Inspect Data")
+head(wafer)
+
+print("check the class of the columns")
+lapply(wafer, class)
+
+print("Fi the model")
+lm.fit <- lm( resist ~ x1 + x2 + x3 + x4 , data=wafer)
+
+```
+
+## (a) Extract the X matrix using the model.matrix function. Examine this to determine how the low and high levels have been coded in the model. 
+```{r}
+model.matrix(lm.fit)
+```
+
+(b) Compute the correlation in the X matrix. Why are there some missing values in the matrix? 
+(c) What difference in resistance is expected when moving from the low to the high level of x1? 
+(d) Refit the model without x4 and examine the regression coefficients and standard errors? What stayed the the same as the original fit and what changed? 
+(e) Explain how the change in the regression coefficients is related to the correlation matrix of X.
+

@@ -103,7 +103,7 @@ We observe a data element with a large value of gamble.  This needs to be noted 
 _The dataset prostate is from a study on 97 men with prostate cancer who were due to receive a radical prostatectomy. Make a numerical and graphical summary of the data as in the first question._
 
 
-##Load and inspect the data from the 
+##Load and inspect the data
 
 ```{r}
 data(prostate, package="faraway")
