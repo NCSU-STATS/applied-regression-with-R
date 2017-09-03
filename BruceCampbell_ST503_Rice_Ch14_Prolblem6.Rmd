@@ -1,0 +1,248 @@
+---
+title: "Chapter 14 Problem 6 Rice"
+subtitle: "Rice, John A. Mathematical Statistics and Data Analysis, Cengage"
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   #expmain <- TeX('$x_t = cos(\\frac{2\\pi t}{4}) + w_t$');x = ts(cos(2*pi*0:500/4) + rnorm(500,0,1));plot(x,main =expmain )
+library(pander)
+library(ggplot2)
+library(ggplot2)
+library(GGally)
+```
+
+Two objects of unknown weights w1 and w2 are weighed on an error-prone pan balance in the following way: 
+
+* (1) object 1 is weighed by itself, and the measurement is 3 g;
+* (2) object 2 is weighed by itself, and the result is 3 g; 
+* (3) the difference of the weights (the weight of object 1 minus the weight of object 2) is measured by placing the objects in different pans, and the result is 1 g; 
+* (4) the sum of the weights is measured as 7g.
+
+The problem is to estimate the true weights of the objects from these measurements. 
+
+* a. Set up a linear model, $Y = X \beta+ \epsilon$. 
+* b. Find the least squares estimates of $w1$ and $w2$.
+* c. Find the estimate of $\sigma^2$ 
+* d. Find the estimated standard errors of the least squares estimates of part (b). 
+* e. Estimate w1-W2 and its standard error. 
+* f. Test the null hypothesis $H_0: w1 = w2$
+
+####For notational convenience we denote $w_1=\beta_1$ and $w_2=\beta_2$
+
+####Also, we do not include an intercept in this model 
+
+Our model is $$ \textbf{Y} = \textbf{X} \; \boldsymbol\beta + \boldsymbol\epsilon$$
+
+The response $ \textbf{Y}$ is our measurements from the scale, the two column model matrix $\textbf{X}$ describes the configuration of weights on the scale, and  $\boldsymbol\epsilon$ is the error of the scale.  For now we assume the errors are iid mean zero random variables, in physical systems we may want to make the additional assumption that $\epsilon_i \sim N(0,\sigma) \;\; \forall \; i$
+
+We seek $\hat{\beta}$ such that 
+
+$$ \textbf{Y} = \textbf{X} \; { \hat{\boldsymbol\beta} } $$ where 
+
+$$ Y = \left(
+\begin{array}{c}
+3\\
+3\\
+1\\
+7\\
+\end{array}
+\right)$$
+
+and 
+
+
+$$ X = \left(
+\begin{array}{c c}
+1 &  0\\
+0 &  1\\
+1 & -1\\
+1 &  1\\
+\end{array}
+\right)$$
+
+Since $$ \textbf{X} \in \mathbb{R}^{4x2}$$ we know that $$\textbf{X}^\intercal \textbf{X} \in \mathbb{R}^{2x2}$$ and we have hope that this can be easily calculated by hand. 
+
+$$ \textbf{X}^\intercal \textbf{X} ==  \left(
+\begin{array}{c c}
+3 &  0\\
+0 &  3\\
+\end{array}
+\right)$$ 
+
+which gives 
+
+$$ ( \textbf{X}^\intercal \textbf{X} )^{-1} =  \left(
+\begin{array}{c c}
+\frac{1}{3} &  0\\
+0 &  \frac{1}{3}\\
+\end{array}\right)$$
+
+
+Now 
+
+$$ ( \textbf{X}^\intercal \textbf{Y} ) =  
+\left(
+\begin{array}{c c c c}
+1 & 0 & 1 & 1 \\
+0 & 1 & -1  & 1\\
+\end{array}\right) 
+\left(
+\begin{array}{c}
+3 \\
+3 \\
+1 \\
+7\\
+\end{array}\right) =
+\left(
+\begin{array}{c}
+11 \\
+9  \\
+\end{array}\right)
+$$
+
+
+Finally we have that 
+
+$$(\textbf{X}^\intercal \textbf{X} )^{-1} \;  \textbf{X}^\intercal \textbf{Y}  =  
+\left(\begin{array}{c c}
+\frac{1}{3} &  0\\
+0 &  \frac{1}{3}\\
+\end{array}\right)
+\left(
+\begin{array}{c}
+11 \\
+9  \\
+\end{array}\right)
+=\left(
+\begin{array}{c}
+\frac{11}{3} \\
+\frac{9}{3}  \\
+\end{array}\right)
+=\hat{\boldsymbol\beta}
+$$
+
+###Calculate $s^2$
+
+$$\hat{\boldsymbol\epsilon}= \textbf{Y} - \textbf{X} \; \hat{\boldsymbol\beta} = 
+=\left(
+\begin{array}{c}
+\frac{-2}{3} \\
+0  \\
+\frac{1}{3}  \\
+\frac{1}{3}  \\
+\end{array}\right)
+$$
+
+And 
+$$
+\frac{\hat{\boldsymbol\epsilon}^\intercal \hat{\boldsymbol\epsilon} }{n-p} = s^2
+$$
+Where $n=4$ and $p=2$ in this case. Note if we had used an intercept we would have $p=3$.  Putting the values in we get that
+
+$$
+s^2 = \frac{1}{3}
+$$
+
+
+### Calculate $se(\beta_i)$
+
+Let $$
+\textbf{C}=(\textbf{X}^\intercal \textbf{X} )^{-1}
+$$
+Then $$se(\beta_i) = s \sqrt{C_{i\; i}}$$
+and putting our values in from above we have that
+$$se(\beta_1) = se(\beta_2)=   \frac{1}{\sqrt{3}} \;  \frac{1}{\sqrt{3}} = \frac{1}{3}$$
+###Estimate $\beta_1-\beta2$ and find the it's standard error
+
+If $\textbf{x}_0 \in \mathbb{R}^p$ is a vector of predictor variables then the prediction $Y_0$ is given by $\mu_0 = \textbf{x}_0^\intercal \hat{\boldsymbol\beta}$.  We saw that the covariance matrix of $\hat{\boldsymbol\beta}$ is 
+
+$$\Sigma_{ \hat{\boldsymbol\beta} \, \hat{\boldsymbol\beta}} = \sigma^2 \, (\textbf{X}^\intercal \textbf{X} )^{-1}$$
+under the assumption that the errors are iid with constant variance. We can use this with the theorem about linear transforms of random vectors to get that 
+
+$$Var(\mu_0) =  \textbf{x}_0^\intercal \, \Sigma_{ \hat{\boldsymbol\beta} \, \hat{\boldsymbol\beta}} \, \textbf{x}_0$$
+Now we're looking to estimate $\beta_1-\beta_2$ so our predictor vectors is going to be 
+
+$$x_0=\left(
+\begin{array}{c}
+1 \\
+-1  \\
+\end{array}\right)$$
+
+Putting all our values from above in to the expression for $\mu_0$ and $Var(\mu_0)$ we get that
+
+$$\mu_0 = \left(
+\begin{array}{c c}
+1 & -1\\
+\end{array}\right)
+\left(\begin{array}{c}
+\frac{11}{3} \\
+3  \\
+\end{array}\right)
+= \frac{2}{3}$$
+
+$$se(\widehat{\beta_1-\beta_2})=\sqrt{Var(\mu_0)} = 
+\sqrt{\left(\begin{array}{c c}
+1 & -1\\
+\end{array}\right)
+\,
+\frac{1}{3}
+\,
+\left(\begin{array}{c c}
+\frac{1}{3} &  0\\
+0 &  \frac{1}{3}\\
+\end{array}\right)
+\left(\begin{array}{c}
+1 \\
+-1\\
+\end{array}\right)}=\frac{\sqrt{2}}{3}
+$$
+Note that we've use the estimate $s^2$ for $\sigma^2$
+
+###Test $H_0 : \beta_1=\beta_2$
+
+If we adopt the additional assumption that the errors are normally distributed, we will have that the $(1-\alpha)100\%$ CI for $\hat{\mu_0}$ is 
+
+$$\hat{\mu_0} \pm t_{n-p}(\frac{\alpha}{2})s_{\hat{\mu_0}}$$
+
+```{r}
+mu0<- 2/3
+se_mu0 <- sqrt(2)/3
+n=4
+p=2
+t_alpha <- qt(0.95,n-p)
+leftCI <- mu0 -   t_alpha * se_mu0
+rightCI <- mu0 + t_alpha * se_mu0
+pander(data.frame(left=leftCI,right=rightCI),caption = "95% CI")
+```
+
+Since our null hypotheses $H_0$ is in the CI we do not have enough evidence to reject it. 
+
+##Checking ealier calculations in R.
+
+We calculated the solution by hand (attached below ) and then checked portions of it in R. 
+```{r}
+data <- data.frame(X1 = c(1,0,1,1),X2=c(0,1,-1,1),Y=c(3,3,1,7))
+
+
+lm.fit.nointercept <- lm(Y ~ X1+X2-1, data=data)
+
+summary(lm.fit.nointercept)
+```
+This agrees  - up to numerical precision - with the exact calculations we did by hand for $\beta$, $se(\beta_1)$, $se(\beta_2)$ and $s^2$
+
+

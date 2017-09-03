@@ -2,6 +2,7 @@
 title: "Bruce Campell ST 503 HW 1"
 subtitle: "Problems 1, 4, 7 Chapter 2 Faraway, Julian J. Linear Models with R, Second Edition. CRC Press."
 author: "Bruce Campbell"
+fontsize: 11pt 
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 ---
@@ -17,11 +18,9 @@ knitr::opts_chunk$set(prompt=FALSE)
 knitr::opts_chunk$set(fig.height=5)
 knitr::opts_chunk$set(fig.width=7)
 knitr::opts_chunk$set(warning=FALSE)
-knitr::opts_chunk$set(message=TRUE)
+knitr::opts_chunk$set(message=FALSE)
 knitr::opts_knit$set(root.dir = ".")
 ```
-
-`r date()`
 
 #Problem 2.1
 
@@ -61,7 +60,7 @@ summary(lm.fit)
 
 ### (a) What percentage of variation in the response is explained by these predictors? 
 
-Here we calculate the proportion of explained and unexplaned variace in the response that is given by the predictors in the mode we fit. 
+Here we calculate the proportion of explained and unexplained variance in the response that is given by the predictors in the mode we fit. 
 ```{r}
 
 var.explained.proportion <-  summary(lm.fit)$r.squared
@@ -74,7 +73,7 @@ pander(data.frame(var.explained.proportion= var.explained.proportion), caption="
 
 ### (b) Which observation has the largest (positive) residual? Give the case number.
 
-We're not sure if the question seeks the larges residual in absolute vaule or the largest of the positive residuals.  We suspect that we're looking for the largest residual in absolute values since this may be an outlier that needs investigation, but we'll report both. 
+We're not sure if the question seeks the larges residual in absolute value or the largest of the positive residuals.  We suspect that we're looking for the largest residual in absolute values since this may be an outlier that needs investigation, but we'll report both. 
 
 ```{r}
 plot(lm.fit$residuals)
@@ -84,7 +83,7 @@ index.largest.pos.residual <- which.max(lm.fit$residuals)
 index.largest.abs.residual <- which.max(abs(lm.fit$residuals))
 
 ```
-The largets residual occurs at index 24 of the dataframe.  This is the associated cases data.
+The largest residual occurs at index 24 of the dataframe.  This is the associated cases data.
 
 ```{r}
 pander(teengamb[24,], caption = "Potential outlier.")
@@ -123,7 +122,7 @@ plot(lm.fit$residuals,teengamb$income)
 
 ### (f) For all other predictors held constant, what would be the difference in predicted expenditure on gambling for a male compared to a female?
 
-This should be the value of the coefficient for gender.  We need to be careful about the encoding and unerstanding whether this was treated as a factor in the regression. Querying the data `?teengamb` tells us that sex is encoded as so `0=male, 1=female`.  Looking at the data frame teengamb we see that the class of the variable is integer and not a factor so we can now interpret the coefficient properly. 
+This should be the value of the coefficient for gender.  We need to be careful about the encoding and understanding whether this was treated as a factor in the regression. Querying the data `?teengamb` tells us that sex is encoded as so `0=male, 1=female`.  Looking at the data frame teengamb we see that the class of the variable is integer and not a factor so we can now interpret the coefficient properly. 
 
 
 ```{r}
@@ -347,12 +346,14 @@ p<- p+ geom_text(aes(label=num.predictors, num.predictors="red", hjust=1, vjust=
 p + ggtitle("residual versus rsquared with num predictors indicated")
 ```
 
-We see that generally the proportion of variance explained by the model increases and the residual standard error decreases as the dimension of the model inreases. The effect becomes less pronounced as we get to 6+ predictors. One could argue that inclusion of gleason to the model does not add much explanatory power.  This may make empirical sense since the gleason score is assigned by a pathologits based on a stained tissue slide.  It could be the case that this feature merley summarises the biochemical variables.   
+We see that generally the proportion of variance explained by the model increases and the residual standard error decreases as the dimension of the model increases. The effect becomes less pronounced as we get to 6+ predictors. One could argue that inclusion of gleason to the model does not add much explanatory power.  This may make empirical sense since the gleason score is assigned by a pathologist based on a stained tissue slide.  It could be the case that this feature summaries or is a weak proxy for the biochemical variables.   
 
 
 # Problem 2.7
 
-_An experiment was conducted to determine the effect of four factors on the resistivity of a semiconductor wafer. The data is found in wafer where each of the four factors is coded as ??? or + depending on whether the low or the high setting for that factor was used. Fit the linear model resist ??? x1 + x2 + x3 + x4._
+_An experiment was conducted to determine the effect of four factors on the resistivity of a semiconductor wafer. The data is found in wafer where each of the four factors is coded as - or + depending on whether the low or the high setting for that factor was used._
+
+###Fit the linear model $resist ~ x1 + x2 + x3 + x4$
 
 ```{r}
 rm(list = ls())
@@ -374,8 +375,73 @@ lm.fit <- lm( resist ~ x1 + x2 + x3 + x4 , data=wafer)
 model.matrix(lm.fit)
 ```
 
-(b) Compute the correlation in the X matrix. Why are there some missing values in the matrix? 
-(c) What difference in resistance is expected when moving from the low to the high level of x1? 
-(d) Refit the model without x4 and examine the regression coefficients and standard errors? What stayed the the same as the original fit and what changed? 
+Now let's look at the data matrix to see how the factors are coded 
+
+```{r}
+pander(wafer)
+```
+
+Comparing the model matrix to the original dataframe we see that low level $- \longrightarrow 0$ and high level $+ \longrightarrow 1$ 
+
+
+##(b) Compute the correlation in the X matrix. Why are there some missing values in the matrix? 
+
+```{r}
+pander(data.frame(cor(model.matrix(lm.fit))), caption = "Correlation of X")
+```
+
+The correlation in the $X$ matrix is the pairwise values of the column correlations.  The correlation is the covariance divided by the sqaure root of the product of the two variances.
+
+_If $X$ and $Y$ are jointly distributed random variables and the variances and covariances of both $X$ and $Y$ exist and the variances are nonzero, then the correlation of $X$ and $Y$ , denoted by , is $\rho=  Cov(X, Y ) /  \sqrt{ Var(X)Var(Y)}$ _
+
+In this case we're dealing with samples and calculating the sample correlations.  
+
+There are NaN's in the due to the intercept. The variance of this vector is 0 and when R attempts to divide by 0 in the calculation of $\rho_{i,j}$ the results is a NaN. Note that R sets the diagonal of the correlation to one - it does not calculate the value - that's why we see $\rho_{1,1}=1$.
+
+We noted that the $i= \neq j$ terms for $i,j>1$ were zero - this cause concern and we wrote some test code to validate the entries. The values were verified to be correct. 
+```{r}
+MM<- model.matrix(lm.fit)
+# 
+# colMeans <- colSums(MM)/nrow(MM)
+# 
+# corr_ij <- function(i,j,MM){return( t(MM[,i] - mean(MM[,i])) %*% (MM[,j]-mean(MM[,j])) /sqrt(var(MM[,i]*var(MM[,j]))) ) }
+# 
+# corr_ij(2,3,MM)
+# corr_ij(3,4,MM)
+# corr_ij(2,4,MM)
+
+```
+
+## (d) Refit the model without x4 and examine the regression coefficients and standard errors? What stayed the the same as the original fit and what changed? 
+
+```{r}
+
+lm.fit.reduced <- lm( resist ~ x1 + x2 + x3 , data=wafer)
+
+summary(lm.fit.reduced)
+
+print ("Now print the summary for the full model")
+
+summary(lm.fit)
+```
+
+We note that the p value for X4 was not significant in the first model and that removing it resulted in a model where the explained variance is not significantly changes. We could do a LRT on the two models to further understand if adding X4 enhances the model. 
+
+
 (e) Explain how the change in the regression coefficients is related to the correlation matrix of X.
+
+This took me a while to sort out.  When the model matrix is orthogonal the covariance matrix of the sampling distribution of the regression parameters will be diagonal - when the error are iid $N(0,\sigma)$.  
+
+$$\hat{\beta} \sim N(\beta, \sigma (\textbf{X}^\intercal \textbf{X} )^{-1} )$$
+
+This means the regression parameters are independent.  That's why we did not see a change in the estimates of the coefficients for $X1 \, X2, \, X3$ when we removed $X4$ from the model.  
+
+We can verify 
+$$(\textbf{X}^\intercal \textbf{X} )^{-1} (\textbf{X}^\intercal \textbf{X} ) = I$$
+
+for our model matrix 
+```{r} 
+solve(t(MM) %*% MM) %*% t(MM)%*% MM
+```
+
 

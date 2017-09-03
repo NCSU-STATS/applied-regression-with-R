@@ -1,6 +1,6 @@
 ---
 title: "Bruce Campell ST 503 HW 1"
-subtitle: "Problems 1,3 Chapter 2 Faraway, Julian J.. Linear Models with R, Second Edition (Chapman & Hall/CRC Texts in Statistical Science). CRC Press."
+subtitle: "Problems 1,3 Chapter 2 Faraway, Julian J.. Linear Models with R, Second Edition Chapman & Hall / CRC Press."
 author: "Bruce Campbell"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
@@ -38,7 +38,7 @@ if(!require(faraway)){
 
 ##Load and inspect the data. 
 
-When loading and inspecting the data we will note which variables are numberic, and which are strings, we'll also be on the lookout for variables that we may want to encode as factors.  Here we note that gender is a candidate for such encoding.
+When loading and inspecting the data we will note which variables are numeric, and which are strings, we'll also be on the lookout for variables that we may want to encode as factors.  Here we note that gender is a candidate for such encoding.
 
 ```{r}
 library(pander)
@@ -47,7 +47,6 @@ library(GGally)
 data(teengamb, package="faraway")
 head(teengamb)
 ```
-
 
 ##Check for missing data
 
@@ -64,13 +63,12 @@ summary(teengamb)
 
 ##Plot the features
 
-This data come from a study of teenage gambpling in Britan.  The response vaiable in this case is gamble, and the other variables in the data set are candidates for predictors in any modelling we do. When creating plots, we'll be interested in how the predictors relate to the response.  We'll also be on the lookout for outliers. 
+This data come from a study of teenage gambling in Britan.  The response variable in this case is gamble, and the other variables in the data set are candidates for predictors in any modeling we do. When creating plots, we'll be interested in how the predictors relate to the response.  We'll also be on the lookout for outliers. 
 
 ```{r}
 ggpairs(teengamb,axisLabels ="none")
 
 ```
-
 
 We note that gender seems to vary with gamble.  We can see this better in a box plot.
 
@@ -83,11 +81,7 @@ teengamb.factormod$sex <-  factor(teengamb.factormod$sex, levels = c(1,0), label
 ggplot(aes( y=gamble, x=sex), data = teengamb.factormod) + geom_boxplot()
 
 ```
-
-
-
 We also note that income seems to have an association with gambling.  
-
 
 ```{r}
 
@@ -144,7 +138,7 @@ ggpairs(prostate , axisLabels ="none")
 ```
 
 
-We note a relationship between lcavol and lpsa, and between lcp and lpsa.  We also note that there is a replationship between the gleason score and lpsa and pgg45. 
+We note a relationship between lcavol and lpsa, and between lcp and lpsa.  We also note that there is a relationship between the gleason score and lpsa and pgg45. 
 
 ```{r}
 p <-ggplot(prostate,aes(x=lcavol, y=lpsa)) +geom_point()
@@ -157,7 +151,7 @@ p <-ggplot(prostate,aes(x=lcp, y=lpsa)) +geom_point()
 p+ geom_smooth(aes(x=lcp,y=lpsa),method="lm")
 
 ```
-We note that there are a number of lcp values at -1.39.  We should follow up with the study authors to undersand this better.  It may be due to limitations or constriants in instrumentation that was used to make the measurements.  
+We note that there are a number of lcp values at -1.39.  We should follow up with the study authors to understand this better.  It may be due to limitations or constraints in instrumentation that was used to make the measurements.  
 
 
 
