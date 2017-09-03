@@ -1,5 +1,5 @@
 ---
-title: "Bruce Campell ST 503 HW 1"
+title: "Bruce Campell ST 503 HW 2"
 subtitle: "Problems 1, 4, 7 Chapter 2 Faraway, Julian J. Linear Models with R, Second Edition. CRC Press."
 author: "Bruce Campbell"
 fontsize: 11pt 
@@ -22,6 +22,11 @@ knitr::opts_chunk$set(message=FALSE)
 knitr::opts_knit$set(root.dir = ".")
 ```
 
+This document was rendered in Rmarkdown.  Some of the code is not displayed. The markdown used to generate this is located on github at
+
+<https://github.com/brucebcampbell/applied-regression-with-R/blob/master/BruceCampbell_ST503_HW2_FarawayCh2_Pblms_1_4_7.Rmd>
+
+
 #Problem 2.1
 
 _The dataset teengamb concerns a study of teenage gambling in Britain. Fit a regression model with the expenditure on gambling as the response and the sex, status, income and verbal score as predictors. Present the output._
@@ -33,18 +38,19 @@ _The dataset teengamb concerns a study of teenage gambling in Britain. Fit a reg
 * (e) Compute the correlation of the residuals with the income. 
 * (f) For all other predictors held constant, what would be the difference in predicted expenditure on gambling for a male compared to a female?
 
-```{r}
+```{r, echo=FALSE}
 if(!require(faraway)){
     install.packages("faraway")
     library(faraway)
 }
+
+library(pander)
+library(ggplot2)
+library(GGally)
 ```
 
 
 ```{r}
-library(pander)
-library(ggplot2)
-library(GGally)
 data(teengamb, package="faraway")
 head(teengamb)
 
@@ -54,8 +60,6 @@ lm.fit <- lm(gamble ~ sex+status+income+verbal, data=teengamb)
 
 summary(lm.fit)
 
-#uncomment for diagnostic plots
-#plot(lm.fit)
 ```
 
 ### (a) What percentage of variation in the response is explained by these predictors? 
@@ -399,7 +403,8 @@ In this case we're dealing with samples and calculating the sample correlations.
 There are NaN's in the due to the intercept. The variance of this vector is 0 and when R attempts to divide by 0 in the calculation of $\rho_{i,j}$ the results is a NaN. Note that R sets the diagonal of the correlation to one - it does not calculate the value - that's why we see $\rho_{1,1}=1$.
 
 We noted that the $i= \neq j$ terms for $i,j>1$ were zero - this cause concern and we wrote some test code to validate the entries. The values were verified to be correct. 
-```{r}
+
+```{r, echo=FALSE}
 MM<- model.matrix(lm.fit)
 # 
 # colMeans <- colSums(MM)/nrow(MM)
