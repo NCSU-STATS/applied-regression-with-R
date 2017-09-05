@@ -10,7 +10,7 @@ output: pdf_document
 ---
 ```{r setup, include=FALSE,echo=FALSE}
 rm(list = ls())
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(dev = 'pdf')
 knitr::opts_chunk$set(cache=TRUE)
 knitr::opts_chunk$set(tidy=TRUE)
@@ -52,7 +52,8 @@ library(GGally)
 
 ```{r}
 data(teengamb, package="faraway")
-head(teengamb)
+
+#head(teengamb)
 
 ggpairs(teengamb)
 
@@ -70,7 +71,7 @@ Here we calculate the proportion of explained and unexplained variance in the re
 var.explained.proportion <-  summary(lm.fit)$r.squared
 var.unexplaned.proportion <- 1- summary(lm.fit)$r.squared
 
-pander(data.frame(var.explained.proportion= var.explained.proportion), caption="Explained")
+pander(data.frame(var.explained.proportion= var.explained.proportion), caption="Proportion of Variance Explained")
 
 ```
 
@@ -80,14 +81,28 @@ pander(data.frame(var.explained.proportion= var.explained.proportion), caption="
 We're not sure if the question seeks the larges residual in absolute value or the largest of the positive residuals.  We suspect that we're looking for the largest residual in absolute values since this may be an outlier that needs investigation, but we'll report both. 
 
 ```{r}
-plot(lm.fit$residuals)
+
 
 index.largest.pos.residual <- which.max(lm.fit$residuals)
 
 index.largest.abs.residual <- which.max(abs(lm.fit$residuals))
 
+df<- data.frame(residuals = lm.fit$residuals)
+df$index <- row.names(df)
+
+
+df$highlight <- ifelse(df$residuals == max(abs(lm.fit$residuals)), "outlier", "ok")
+highlight.colours <- c("outlier" = "red", "ok" = "grey50")
+
+highlight.residual <- max(abs(lm.fit$residuals))
+textdf <- df[df$residuals == highlight.residual, ]
+
+ggplot(df,aes(x= index, y=residuals) ) +geom_point(size = 3, aes(colour = highlight))  + scale_x_discrete(breaks=c("10","20","30","40","50")) +
+  scale_color_manual("Status", values = highlight.colours) +
+    geom_text(data = textdf, aes(x = index, y = residuals), label = "possible outlier")
+
 ```
-The largest residual occurs at index 24 of the dataframe.  This is the associated cases data.
+The largest residual occurs at index 24 of the dataframe.  This is the associated case data.
 
 ```{r}
 pander(teengamb[24,], caption = "Potential outlier.")
@@ -101,12 +116,26 @@ residuals.mean <- mean(lm.fit$residuals)
 
 residuals.median <- median(lm.fit$residuals)
 
-pander(data.frame(residuals.mean=residuals.mean,residuals.median=residuals.median))
+pander(data.frame(residuals.mean=residuals.mean,residuals.median=residuals.median), caption = "mean and median of the residuals")
 
-hist(lm.fit$residuals,30)
+qplot(lm.fit$residuals, geom="histogram", bins = 20 , main = "Residuals Histogram" ) 
+
+sd(lm.fit$residuals)
+
 ```
 
+
 The mean residual is a very small number! We'd need to think through the implications of this - possibly it is an artifact of data that was generated.
+
+
+Regression diagnostics are plotted below. 
+
+```{r}
+library(ggfortify)
+autoplot(lm.fit)
+```
+
+
 
 ### (d) Compute the correlation of the residuals with the fitted values. 
 ```{r}
@@ -140,7 +169,7 @@ This value represents the change in the response when there is a unit change in 
 
 We can apply the model by hand to a element of the data set to see this in practice. 
 
-```{r}
+```{r , echo=TRUE}
 data.sample<- sample(nrow(teengamb),1)
 data.element <- teengamb[data.sample,]
 data.element$gamble <-NULL
@@ -159,7 +188,6 @@ data.element[1,2] <- ifelse(data.element[1,2]==1, 0, 1)
 pander(data.frame(data.element), caption ="Data sample with gender modified")
 
 response.gendermod <- (data.element) %*% beta.hat
-
 
 pander(data.frame(response.difference = (response.orig- response.gendermod)))
 ```
@@ -202,6 +230,7 @@ model.stats <- rbind(list(num.predictors = 1,r.squared=r.squared,residual.se=res
 model.stats$model.string <- as.character(model.stats$model.string)
 ```
 
+We will only print the models for $n=2$ and $n=8$ predictors.
 
 ###Fit lpsa ~ lcavol +lweight 
 
@@ -222,13 +251,12 @@ model.stats$model.string <- as.character(model.stats$model.string)
 ```
 
 
-###Fit lpsa ~ lcavol +lweight + svi 
 
 ```{r}
 
 lm.fit <- lm(lpsa ~ lcavol +lweight + svi , data=prostate)
 
-tidy(lm.fit)
+#tidy(lm.fit)
 
 model.summary <- summary(lm.fit)
 
@@ -242,13 +270,12 @@ model.stats$model.string <- as.character(model.stats$model.string)
 ```
 
 
-###Fit lpsa ~ lcavol +lweight + svi + lbph 
 
 ```{r}
 
 lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph , data=prostate)
 
-tidy(lm.fit)
+#tidy(lm.fit)
 
 model.summary <- summary(lm.fit)
 
@@ -261,13 +288,12 @@ model.stats$model.string <- as.character(model.stats$model.string)
 
 ```
 
-###Fit lpsa ~ lcavol +lweight + svi + lbph + age 
 
 ```{r}
 
 lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph + age , data=prostate)
 
-tidy(lm.fit)
+#tidy(lm.fit)
 
 model.summary <- summary(lm.fit)
 
@@ -280,13 +306,11 @@ model.stats$model.string <- as.character(model.stats$model.string)
 ```
 
 
-###Fit lpsa ~ lcavol +lweight + svi + lbph + age + lcp 
-
 ```{r}
 
 lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph + age + lcp , data=prostate)
 
-tidy(lm.fit)
+#tidy(lm.fit)
 
 model.summary <- summary(lm.fit)
 
@@ -299,13 +323,11 @@ model.stats$model.string <- as.character(model.stats$model.string)
 ```
 
 
-###Fit lpsa ~ lcavol +lweight + svi + lbph + age + lcp + pgg45
-
 ```{r}
 
 lm.fit <- lm(lpsa ~ lcavol +lweight + svi + lbph + age + lcp + pgg45, data=prostate)
 
-tidy(lm.fit)
+#tidy(lm.fit)
 
 model.summary <- summary(lm.fit)
 
@@ -357,7 +379,7 @@ We see that generally the proportion of variance explained by the model increase
 
 _An experiment was conducted to determine the effect of four factors on the resistivity of a semiconductor wafer. The data is found in wafer where each of the four factors is coded as - or + depending on whether the low or the high setting for that factor was used._
 
-###Fit the linear model $resist ~ x1 + x2 + x3 + x4$
+###Fit the linear model $resist \sim x1 + x2 + x3 + x4$
 
 ```{r}
 rm(list = ls())
@@ -419,14 +441,18 @@ MM<- model.matrix(lm.fit)
 
 ## (d) Refit the model without x4 and examine the regression coefficients and standard errors? What stayed the the same as the original fit and what changed? 
 
+####Reduced Model
+
 ```{r}
 
 lm.fit.reduced <- lm( resist ~ x1 + x2 + x3 , data=wafer)
 
 summary(lm.fit.reduced)
+```
 
-print ("Now print the summary for the full model")
+####Full Model
 
+```{r}
 summary(lm.fit)
 ```
 
@@ -435,7 +461,7 @@ We note that the p value for X4 was not significant in the first model and that 
 
 (e) Explain how the change in the regression coefficients is related to the correlation matrix of X.
 
-This took me a while to sort out.  When the model matrix is orthogonal the covariance matrix of the sampling distribution of the regression parameters will be diagonal - when the error are iid $N(0,\sigma)$.  
+When the model matrix is orthogonal the covariance matrix of the sampling distribution of the regression parameters will be diagonal - when the error are iid $N(0,\sigma)$.  
 
 $$\hat{\beta} \sim N(\beta, \sigma (\textbf{X}^\intercal \textbf{X} )^{-1} )$$
 
