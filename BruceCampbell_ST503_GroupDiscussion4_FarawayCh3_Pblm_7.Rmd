@@ -1,0 +1,157 @@
+---
+title: "Chapter 3 Problem 7"
+subtitle: "Faraway, Julian J. Linear Models with R, Second Edition (Chapman & Hall/CRC Texts"
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   #expmain <- TeX('$x_t = cos(\\frac{2\\pi t}{4}) + w_t$');x = ts(cos(2*pi*0:500/4) + rnorm(500,0,1));plot(x,main =expmain )
+library(pander)
+library(ggplot2)
+library(ggplot2)
+library(GGally)
+```
+
+_In the punting data, we find the average distance punted and hang times of 10 punts of an American football as related to various measures of leg strength for 13 volunteers._
+
+* (a) Fit a regression model with Distance as the response and the right and left leg strengths and flexibilities as predictors. Which predictors are significant at the 5% level? 
+* (b) Use an F-test to determine whether collectively these four predictors have a relationship to the response. 
+* (c) Relative to the model in (a), test whether the right and left leg strengths have the same effect. 
+* (d) Construct a 95% confidence region for (??RStr,??LStr). Explain how the test in (c) relates to this region -  not required
+* (e) Fit a model to test the hypothesis that it is total leg strength defined by adding the right and left leg strengths that is sufficient to predict the response in comparison to using individual left and right leg strengths. 
+* (f) Relative to the model in (a), test whether the right and left leg flexibilities have the same effect. 
+* (g) Test for left-right symmetry by performing the tests in (c) and (f) simultaneously. 
+* (h) Fit a model with Hang as the response and the same four predictors. Can we make a test to compare this model to that used in (a)? Explain.
+
+```{r,echo=FALSE}
+if(!require(faraway)){
+    install.packages("faraway")
+    library(faraway)
+}
+
+```
+ 
+## First we load and inspect the data. 
+
+```{r, size="small"}
+data(punting, package="faraway")
+head(punting)
+
+ggpairs(data = punting,axisLabels ="none")
+```
+
+## a) Fit a regression model with Distance as the response and the right and left leg strengths and flexibilities as predictors. Which predictors are significant at the $5\%$ level
+```{r}
+lm.fit <- lm(Distance ~ RStr + LStr+RFlex+LFlex, data=punting)
+
+summary(lm.fit)
+
+#Uncomment for diagnostic plots.
+#plot(lm.fit)
+```
+
+We see that none of the predictors are significant at the $5\% level for this model. 
+
+## b) Use an F-test to determine whether collectively these four predictors have a relationship to the response
+
+The test we want to perform is 
+
+$$H_0 : \beta_{Rstr} \, = \beta_{LStr} \, = \beta_{RFlex} \, = \beta_{LFlex} = 0 $$
+versus the alternative that one or more of the coefficients is not zero.  The likelihood ratio test for the full model versus the null model $Y \sim \beta_0 + \epsilon$ works out to be an F-test.  
+
+
+```{r}
+lm.fit.null <- lm(Distance ~ 1, data=punting)
+
+anova(lm.fit.null,lm.fit)
+
+```
+
+Based on the p-value we have enough evidence to reject the null hypothesis at a significance of $5\%$ in this case and claim that collectively the four predictors have a predictive relationship with the response. 
+
+## (c) Relative to the model in (a), test whether the right and left leg strengths have the same effect. 
+
+The test we want to perform in this case is 
+$$H_0 : \beta_{Rstr} \, = \beta_{LStr}$$ versus the alternative that the effect is not the same.
+
+```{r}
+lm.fit.subspace <- lm(Distance ~ I(RStr + LStr) + RFlex+LFlex, data=punting)
+
+anova(lm.fit.subspace,lm.fit)
+```
+
+Based on this p-value we do not have enough evidence to reject the null hypothesis that the right and left leg strength have the same effect. 
+
+## (e) Fit a model to test the hypothesis that it is total leg strength defined by adding the right and left leg strengths that is sufficient to predict the response in comparison to using individual left and right leg strengths. 
+
+```{r}
+
+lm.fit.strength <- lm(Distance ~ RStr + LStr, data=punting)
+summary(lm.fit.strength)
+lm.fit.strength.sum <- lm(Distance ~ I(RStr + LStr), data=punting)
+summary(lm.fit.strength.sum)
+anova(lm.fit.strength.sum,lm.fit.strength)
+
+```
+
+
+##  (f) Relative to the model in (a), test whether the right and left leg flexibilities have the same effect.
+
+```{r}
+lm.fit.subspace <- lm(Distance ~ RStr + LStr + I(RFlex+LFlex), data=punting)
+
+anova(lm.fit.subspace,lm.fit)
+```
+
+
+Based on this p-value we do not have enough evidence to reject the null hypothesis that the right and left leg flexibility have the same effect. 
+
+
+## (g) Test for left-right symmetry by performing the tests in (c) and (f) simultaneously
+
+
+The test we want to perform is 
+
+$$H_0 : \beta_{Rstr} \, = \beta_{LStr}  \; , \; \beta_{RFlex} \, = \beta_{LFlex} $$
+
+```{r}
+
+lm.fit.subspace <- lm(Distance ~ I(RStr + LStr) + I(RFlex+LFlex), data=punting)
+
+anova(lm.fit.subspace,lm.fit)
+
+```
+Based on this p-value we can not reject the null hypothesis of right-left symmetry. 
+
+## (h) Fit a model with Hang as the response and the same four predictors. Can we make a test to compare this model to that used in (a)? Explain.
+
+```{r}
+
+lm.fit <- lm(Hang ~ RStr + LStr+RFlex+LFlex, data=punting)
+
+summary(lm.fit)
+
+```
+
+We see a higher $R^2$ for this model. Here is a plot of hang verus distance
+
+```{r,echo=FALSE}
+ggplot(data = punting, aes(x=Hang,y=Distance)) + geom_point()
+```
+
+It is not clear what the criteria is for comparison in this case.  We know we can't use an F-test - the models are not nested.  We could build a full model with all the variables and look at interactions, but that's not a test. We also don't have enough data to consider all the interactions in $Distance \sim Hang * RStr * LStr * RFlex * LFlex$

@@ -1,0 +1,32 @@
+---
+title: "Bruce Campell NCSU ST 503 HW 4"
+subtitle: "Probems 3.2, 3.4, 3.5, 3.6, 3.4, 4.2 Faraway, Julian J. Linear Models with R, Second Edition Chapman & Hall / CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+fontsize: 12pt
+header-includes:
+   - \usepackage{bbm}
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   #expmain <- TeX('$x_t = cos(\\frac{2\\pi t}{4}) + w_t$');x = ts(cos(2*pi*0:500/4) + rnorm(500,0,1));plot(x,main =expmain )
+library(pander)
+library(ggplot2)
+library(ggplot2)
+library(GGally)
+```
+
+##
