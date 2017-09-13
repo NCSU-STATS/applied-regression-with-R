@@ -25,6 +25,7 @@ library(pander)
 library(ggplot2)
 library(ggplot2)
 library(GGally)
+library(printr)
 ```
 
 _In the punting data, we find the average distance punted and hang times of 10 punts of an American football as related to various measures of leg strength for 13 volunteers._

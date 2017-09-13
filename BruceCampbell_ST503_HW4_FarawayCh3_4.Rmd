@@ -1,6 +1,6 @@
 ---
-title: "Bruce Campell NCSU ST 503 HW 4"
-subtitle: "Probems 3.2, 3.4, 3.5, 3.6, 3.4, 4.2 Faraway, Julian J. Linear Models with R, Second Edition Chapman & Hall / CRC Press."
+title: "NCSU ST 503 HW 4"
+subtitle: "Probems 3.2, 3.4, 3.5, 3.6, 4.2 Faraway, Julian J. Linear Models with R, Second Edition Chapman & Hall / CRC Press."
 author: "Bruce Campbell"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 fontsize: 12pt
@@ -22,11 +22,195 @@ knitr::opts_chunk$set(fig.width=7)
 knitr::opts_chunk$set(warning=FALSE)
 knitr::opts_chunk$set(message=FALSE)
 knitr::opts_knit$set(root.dir = ".")
-library(latex2exp)   #expmain <- TeX('$x_t = cos(\\frac{2\\pi t}{4}) + w_t$');x = ts(cos(2*pi*0:500/4) + rnorm(500,0,1));plot(x,main =expmain )
+library(latex2exp)   
 library(pander)
 library(ggplot2)
 library(ggplot2)
 library(GGally)
+library(broom)
+library(printr)
 ```
 
-##
+## Problem 3.2
+
+_Thirty samples of cheddar cheese were analyzed for their content of acetic acid, hydrogen sulfide and lactic acid. Each sample was tasted and scored by a panel of judges and the average taste score produced. Use the cheddar dataset_
+
+### (a) Fit a regression model with taste as the response and the three chemical contents as predictors. Identify the predictors that are statistically significant at the 5% level.
+
+```{r, echo = FALSE}
+data(cheddar, package="faraway")
+```
+
+```{r, echo=TRUE}
+lm.fit <- lm(taste ~ Acetic + H2S + Lactic, data=cheddar)
+```
+
+```{r, echo=FALSE}
+tidy(lm.fit)
+```
+
+We see that $H2S$ and $Lactic$ are significant to the $5\%$ level. 
+
+### (b) Acetic and H2S are measured on a log scale. Fit a linear model where all three predictors are measured on their original scale. Identify the predictors that are statistically significant at the 5% level for this model.
+
+To undo the log transform we need the base - this is not specified in the help section for the data set. Since we're dealing with chemical concentration data, and based on part e) we will assume that $Acetic$ and $H2S$ are measured on a $Log_{e}$ scale.  
+
+```{r , echo=TRUE}
+lm.fit.exp <- lm(taste ~ I(exp(1)^Acetic) + I(exp(1)^H2S) + Lactic, data=cheddar)
+```
+
+```{r echo=FALSE}
+tidy(lm.fit.exp)
+library(knitr)
+kable( data.frame(rsquared = summary(lm.fit.exp)$r.squared) , caption = "taste ~ I(exp(1)^Acetic) + I(exp(1)^H2S) + Lactic")
+
+```
+
+We see that now only $Lactic$ is significant at the $5\%$ level.  $H2S$ is significant at $10\%$.   We thought this could be due to numerical issues in the QR - to test that out we took the transformed data set, standardize it and fit that. 
+
+For comparison on the effect of scaling we also fit the scaled model without the inverse log transform. The scaled inverse log transformed model had  $H2S$ and $Lactic$ significant to the $5\%$ level.
+
+```{r, echo=FALSE}
+# Test code to see the effects of scaling each model 
+#df <- cheddar
+#df <-data.frame(scale(df))
+#lm.fit.scaled <- lm(taste ~ Acetic + H2S + Lactic, data=df)
+#summary(lm.fit.scaled)
+
+#df$Acetic <- exp(1)^df$Acetic
+#df$H2S <- exp(1)^df$H2S
+#df <-data.frame(scale(df))
+#lm.fit.transform.scaled <- lm(taste ~ Acetic + H2S + Lactic, data=df)
+#summary(lm.fit.transform.scaled)
+```
+
+
+### (c) Can we use an F-test to compare these two models? Explain. Which model provides a better fit to the data? Explain your reasoning. 
+
+We can not use an F-test to compare these models since they are not nested. The model fit in $ln$ scale is a better fit to the data based on the $R^2$ criteria. 
+
+### (d) If H2S is increased 0.01 for the model used in (a), what change in the taste would be expected? 
+
+For the model fit in part a) we saw that $\beta_{H2S} = 3.9118$ this means that keeping all other variables constant and increasing $H2S$ by $0.01$ increases taste by $0.039118$.  We can verify this is the case numerically on an example data element from the training set. 
+
+```{r}
+data.sample<- sample(nrow(cheddar),1)
+data.element <- cheddar[data.sample,]
+data.element$taste <-NULL
+data.element <- as.matrix(cbind(intercept=1,data.element))
+beta.hat <- as.matrix( lm.fit$coefficients)
+pander(data.frame(data.element), caption ="Data sample")
+response.orig <- (data.element) %*% beta.hat    
+#change the of our data element H2S by +0.01  
+data.element[1,3] <- data.element[1,3] + 0.01
+pander(data.frame(data.element), caption ="Data sample data element H2S by +0.01")
+response.mod <- (data.element) %*% beta.hat
+pander(data.frame(response.difference = (response.mod - response.orig)))
+```
+
+### (e) What is the percentage change in H2S on the original scale corresponding to an additive increase of 0.01 on the (natural) log scale?
+
+Let our log concentration be $\alpha$ then $e^\alpha$ is our concentration in the original scale. A $\delta$ change in the log scale H2S results in a concentration of $e^{\alpha + \delta}$
+
+The percent change is 
+$$( \frac{e^{\alpha + \delta}- e^\alpha}{e^{\alpha}} ) * 100 \% =  ( e^{ \delta}-1 ) * 100 \%$$
+In our case $\delta=0.01$ and the percent change is ```r exp(1)^0.01 *100```
+
+## Problem 3.3
+
+_Using the teengamb data, fit a model with gamble as the response and the other variables as predictors._
+
+### (a) Which variables are statistically significant at the 5% level?
+
+```{r,echo=FALSE}
+rm(list = ls())
+data(teengamb, package="faraway")
+```
+
+```{r}
+lm.fit <- lm(gamble ~ sex+status+income+verbal, data=teengamb)
+```
+
+```{r, echo=FALSE}
+tidy(lm.fit)
+```
+
+We see that $gender$ and $income$ are both significant at the $5\%$ level.  
+
+### (b) What interpretation should be given to the coefficient for sex?
+
+The variable $sex$ is encoded $0=male, 1=female$ and the coefficient for it $\beta_{sex} = -22.118$.  
+This means that when all the other variables are held constant and the gender changes from male to female that
+there will be a $-22.118$ change in $gamble$.
+
+### (c) Fit a model with just income as a predictor and use an F-test to compare it to the full model.
+
+```{r}
+lm.fit.income <- lm(gamble ~ income, data=teengamb)
+```
+
+The reduced model $gamble \sim income$
+```{r,echo=FALSE}
+tidy(lm.fit.income)
+```
+
+Results of the F-test
+
+```{r,echo=FALSE}
+tidy(anova(lm.fit.income ,lm.fit))
+```
+
+
+Based on the p-value of the F-statistic we do have enough evidence to reject the null hypothesis that the models are equivalent in the variance explained via the RSS statistic.  We claim that the full model is better based on the RSS criteria.
+
+##Problem 3.4
+
+We are using the sat data for this problem. 
+```{r,echo=FALSE}
+rm(list = ls())
+data(sat, package = "faraway")
+```
+### (a) Fit a model with total sat score as the response and expend, ratio and salary as predictors. Test the hypothesis that $\beta_{salary} = 0$. Test the hypothesis that $\beta_{salary} = \beta_{ratio} = \beta_{expend} = 0$. Do any of these predictors have an effect on the response? 
+
+```{r}
+lm.fit <- lm(total ~ expend+ratio+ salary, data=sat)
+tidy(lm.fit)
+```
+
+We see that salary is significant at the $\alpha= 10\%$ level.  
+
+```{r}
+lm.fit.reduced <- lm(total ~ expend+ratio, data=sat)
+anova(lm.fit.reduced,lm.fit)
+```
+We see that the F-statistic has a p-value of $0.0667$ - this is the same as the p-value for the t-statistic given above for the coefficient $\beta_{salary}$ 
+
+Test $H_0 \; : \; \beta_{salary} = \beta_{ratio} = \beta_{expend} = 0$
+
+```{r}
+lm.fit.null <- lm(total ~ 1, data=sat)
+
+anova(lm.fit.null,lm.fit)
+```
+
+Based on the F-statistic we have enough evidence to reject the null hypothesis that all coefficients are zero.  We claim at least one predictor has an effect on the response. 
+
+### (b) Now add takers to the model. Test the hypothesis that $\beta_{takers} = 0$. Compare this model to the previous one using an F-test. Demonstrate that the F-test and t-test here are equivalent.
+
+Fit the model $total \sim expend+ratio+ salary + takers$
+```{r}
+lm.fit <- lm(total ~ expend+ratio+ salary + takers, data=sat)
+tidy(lm.fit)
+```
+
+Fir the model $total \sim expend+ratio+ salary$ and perform the F-test.
+```{r}
+lm.fit.reduced <- lm(total ~ expend+ratio+ salary, data=sat)
+anova(lm.fit.reduced,lm.fit)
+```
+
+Just as above we see that the F-statistic for the reduced model has a p-value that is the same as the p-value for the t-statistic given above for the coefficient $\beta_{takers}$ 
+
+Thinking for a moment on proving this equivalemce more formally, we know that the $t$ and $F$ distributions are related by $T \sim t_n \implies T^2 \sim F_{1,n}$ We know that the F-test is derived from the generalized likelihood ratio test and that in our case with the assumption of normal errors the MLE of the parameters is multivariate normal
+$$\hat{\beta} \sim N(\beta, \sigma (\textbf{X}^\intercal \textbf{X} )^{-1} )$$. Also, $\epsilon_i \sim N(0,\sigma^2) \implies \frac{\epsilon_i^2}{\sigma^2} \sim \chi^2_1$ and that $$\sum\limits_{i=1}^{n} \chi^2_1 \sim  \chi^2_n$$.  We can see how $RSS_\omega$ and $RSS_\Omega$ come up in the F-test as sums of squares of normal random variables.  We should be able to show that the $T^2$ comes out of a particular F-test situation where the degress of freedom of $\omega$ and $\Omega$ differ by 1. 
+

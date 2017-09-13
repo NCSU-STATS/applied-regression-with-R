@@ -3,7 +3,7 @@ title: "Bruce Campbell NCSU ST-503 HW 3"
 subtitle: "Chapter 14 Problems 2,3,6,30,31 Rice, John A. Mathematical Statistics and Data Analysis, Cengage"
 author: "Bruce Campbell"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-fontsize: 12pt
+fontsize: 11pt
 header-includes:
    - \usepackage{bbm}
 output: pdf_document
@@ -28,10 +28,9 @@ library(ggplot2)
 library(ggplot2)
 library(GGally)
 ```
-
 ##Problem 14.2
 
-Plot $(x,y)$ for the following data points; 
+For the following data points Plot $(x,y)$, fit and sketcha line $y = a + bx$ by the method of least squares, fit and sketch a line given by $x = c + dy$
 
 \begin{table}[]
 \centering
@@ -43,8 +42,7 @@ y & .27 & 1.34 & -.53 & .35 & 1.28 & -.98 & -.72 & -.81  & .64 & -1.59
 \end{tabular}
 \end{table}
 
-
-```{r}
+```{r,echo=FALSE}
 x <-c(0.34,1.38,-0.65,0.68,1.4,-.88,-.3,-1.18,.5,-1.75)
 y<-c(.27,1.34,-.53,.35,1.28,-.98,-.72,-.81,.64,-1.59)
 
@@ -57,12 +55,9 @@ p<- p+ geom_abline(intercept = lm.fit.xy$coefficients["(Intercept)"],slope = lm.
 lm.fit.yx <- lm(y~x,data = df)
 p<- p+ geom_abline(intercept = lm.fit.yx$coefficients["(Intercept)"],slope = lm.fit.yx$coefficients["x"],color="blue", show.legend = TRUE,legend=TRUE,show_guide=TRUE,guide="legend")  +  guides(shape = guide_legend(override.aes = list(linetype = 0)))
 p
-
 ```
 
-### Fit a line y = a + bx by the method of least squares, and sketch it on the plot. 
-* b. Fit a line x = c + dy by the method of least squares, and sketch it on the plot. 
-* c. Are the lines in parts (a) and (b) the same? If not, why not?
+### c. Are the lines in parts (a) and (b) the same? If not, why not?
 
 The lines are not the same.  Geometrically, we're minimizing errors in the y direction 
 for the model $y \sim x$ and for the model $x \sim y$ we're minimizing errors in the x direction. 
@@ -80,12 +75,14 @@ $$ \frac{\bar{x}}{\bar{y}} = \frac{\hat{\sigma_x^2}}{\hat{\sigma_y^2}}$$
 
 ##Problem 14.3 
 
-Show that when $y_i = \mu + \epsilon_i \ni e_i \;\;iid \,\; : \; E[\epsilon]=0 \; Var(\epsilon_i)=\sigma^2$ we have $\bar{y}$ is the least squares estimate for $\mu$
+Show that when $y_i = \mu + \epsilon_i \ni e_i \;\;iid \,\; : \; E[\epsilon]=0 \; , Var(\epsilon_i)=\sigma^2$ we have $\bar{y}$ is the least squares estimate for $\mu$.
+
+The LS errors we want to minimize are 
 
 $$ S(\mu) = \sum (y_i - \mu)^2 $$
 Taking derivatives and setting equal to zero we have that 
 
-$$\frac{\partial S}{\partial \mu} = 0 = -2 \; \sum (y_i - mu) \implies \sum y_i = n \mu $$
+$$\frac{\partial S}{\partial \mu} = 0 = -2 \; \sum (y_i - \mu) \implies \sum y_i = n \mu $$
 So $\hat{\mu} = \bar{y}$
 
 
@@ -141,8 +138,10 @@ which is derived by solving the least squares problem for the model $\textbf{Y} 
 
 Find $Var(\bar{X})$ where 
 
-$$ \textbf{X} = (X_1, \ldots , X_n) \ni Var(X_i)=\sigma \; \forall \; i \; Cov(X_i,X_j)= \rho \, \sigma \; \forall \; i \neq j$$
-
+$$ \textbf{X} = (X_1, \ldots , X_n) \ni Var(X_i)=\sigma \; \forall \; i $$
+and 
+$$ Cov(X_i,X_j)= \rho \, \sigma \; \forall \; i \neq j$$
+The covariance matrix of the random vector $X$ is given by
 
 $$\Sigma_{X \; X} = 
 \left(\begin{array}{cccc}
@@ -156,6 +155,11 @@ $$
 Now consider the mean as a vector.
 
 $$Y = \frac{1}{n} \textbf{1}^\intercal X = \bar{X} \in \mathbb{R}^1$$
+$\Sigma_{Y \, Y}$ is given by a special case of the covarinace expression for affine transforms of random vectors
+
+
+$$\textbf{Y}= \textbf{A} \textbf{X} \;\; \textbf{Z}= \textbf{B} \textbf{X} \implies \Sigma_{Y \,Z} =\textbf{A}^\intercal \Sigma_{X \,X} \textbf{B} $$
+
 We have that 
 
 $$\Sigma_{Y \, Y} = \frac{1}{n} \textbf{1}^\intercal \;\Sigma_{X  X} \;\frac{1}{n} \textbf{1} =
@@ -180,7 +184,7 @@ Z_2  \\
 Z_3  \\
 Z_4  
 \end{array}
-\right)\in \mathbb{R}^4$$ and  $\Sigma_{Z \, Z} = \sigma^2 I$$
+\right)\in \mathbb{R}^4$$ and  $\Sigma_{Z \, Z} = \sigma^2 I$
 
 $$U = Z_1 + Z_2 + Z_3 +Z_4$$ and $$V= (Z_1+Z_2) - (Z_3 + Z_4)$$
 Find $Cov(U,V)$
@@ -199,7 +203,6 @@ $$Cov(U,V) = \Sigma_{U \, V} = \textbf{1}^\intercal \,  \Sigma_{Z \, Z}  \, a = 
 \right) =0$$
 
 We've use the result about the cross covariance of 2 affine transforms of a random vector;
-
 
 $$\textbf{Y}= \textbf{A} \textbf{X} \;\; \textbf{Z}= \textbf{B} \textbf{X} \implies \Sigma_{Y \,Z} =\textbf{A}^\intercal \Sigma_{X \,X} \textbf{B} $$
 We don't need it and the book doesn't state this but we note that adding a constant to $\textbf{Y}$ or $\textbf{Z}$ does not change the cross covariance. 
