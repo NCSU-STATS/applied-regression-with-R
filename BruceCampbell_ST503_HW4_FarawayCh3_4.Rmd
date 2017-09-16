@@ -211,6 +211,53 @@ anova(lm.fit.reduced,lm.fit)
 
 Just as above we see that the F-statistic for the reduced model has a p-value that is the same as the p-value for the t-statistic given above for the coefficient $\beta_{takers}$ 
 
+REVISIT!
 Thinking for a moment on proving this equivalemce more formally, we know that the $t$ and $F$ distributions are related by $T \sim t_n \implies T^2 \sim F_{1,n}$ We know that the F-test is derived from the generalized likelihood ratio test and that in our case with the assumption of normal errors the MLE of the parameters is multivariate normal
 $$\hat{\beta} \sim N(\beta, \sigma (\textbf{X}^\intercal \textbf{X} )^{-1} )$$. Also, $\epsilon_i \sim N(0,\sigma^2) \implies \frac{\epsilon_i^2}{\sigma^2} \sim \chi^2_1$ and that $$\sum\limits_{i=1}^{n} \chi^2_1 \sim  \chi^2_n$$.  We can see how $RSS_\omega$ and $RSS_\Omega$ come up in the F-test as sums of squares of normal random variables.  We should be able to show that the $T^2$ comes out of a particular F-test situation where the degress of freedom of $\omega$ and $\Omega$ differ by 1. 
+REVISIT!
 
+
+##Problem 3.5 $R^2$ and the F-test
+
+Find a formula relating R 2 and the F-test for the regression. 
+
+##Problem 3.6 MBA Students
+
+_Thirty-nine MBA students were asked about happiness and how this related to their income and social life. The data are found in faraway::happy._
+
+Note, pay attention to warnings in R! GGally has a happy dataset as well.  
+
+```{r,echo=FALSE}
+rm(list = ls())
+library(faraway)
+data(happy, package = "faraway")
+```
+
+###Fit a regression model with happy as the response and the other four variables as predictors. 
+```{r, echo=FALSE}
+lm.fit <- lm(happy ~ money+sex+love+work, data = happy)
+summary(lm.fit)
+```
+###(a) Which predictors were statistically significant at the 1% level? 
+
+We see that money and love are significant at the $1\%$ level. 
+
+###(b) Use the table function to produce a numerical summary of the response. What assumption used to perform the t-tests seems questionable in light of this summary? 
+
+```{r}
+table(happy$happy)
+#hist(happy$happy)
+#plot(lm.fit)
+```
+
+Wow, I have NO idea what this question is asking me. The assumptions we make are;
+* Linear relationship
+* Multivariate normality
+* No or little multicollinearity
+* No auto-correlation
+* Homoscedasticity - the variance around the regression line is the same for all values of the predictors
+
+All of these assumptions involve elements beyond the distribution of the measured responses $ \{ y_i \} $. 
+
+
+(c) Use the permutation procedure described in Section 3.3 to test the significance of the money predictor. (d) Plot a histgram of the permutation t-statistics. Make sure you use the the probability rather than frequency version of the histogram. (e) Overlay an appropriate t-density over the histogram. Hint: Use grid <- seq(-3, 3, length = 300) to create a grid of values, then use the dt function to compute the t-density on this grid and the lines function to superimpose the result. (f) Use the bootstrap procedure from Section 3.6 to compute 90% and 95% con- fidence intervals for ??money. Does zero fall within these confidence intervals? Are these results consistent with previous tests?

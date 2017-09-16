@@ -1,0 +1,138 @@
+---
+title: "NCSU ST 503 Discussion 5"
+subtitle: "Probem  4.5 Faraway, Julian J. Linear Models with R CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+library(broom)
+```
+
+## Comparing models of body fat measurement
+
+_For the fat data used in this chapter, a smaller model using only age, weight, height and abdom was proposed on the grounds that these predictors are either known by the individual or easily measured._ 
+
+### (a) Compare this model to the full thirteen-predictor model used earlier in the chapter. Is it justifiable to use the smaller model? 
+
+
+```{r, echo = FALSE}
+data(fat, package="faraway")
+```
+
+```{r, echo=FALSE}
+lm.fit.subset <- lm(brozek ~ age + weight+height + abdom, data=fat)
+lm.fit.full<-lm(brozek ~ age + weight + height + neck + chest + abdom + hip + thigh + knee + ankle + biceps + forearm + wrist, data=fat)
+```
+
+$brozek \sim age + weight+height + abdom$
+
+```{r, echo=FALSE}
+tidy(lm.fit.subset)
+pander(data.frame(rsquared=summary(lm.fit.subset)$r.squared))
+```
+
+$brozek \sim age + weight + height + neck + chest + abdom + hip + thigh + knee + ankle + biceps + forearm + wrist$
+
+```{r}
+tidy(lm.fit.full)
+pander(data.frame(rsquared=summary(lm.fit.full)$r.squared))
+```
+
+
+The $R^2$ is slightly higher for the full model, but we claim that based on practical model deployment considerations it's justifiable to use the smaller model. If the measurements for the full model were made in a laboratory setting, one could imagine a scenario where the full model would perform worse in deployment due to poor measurement of the extra variables.  
+
+
+### (b) Compute a 95% prediction interval for median predictor values and compare to the results to the interval for the full model. Do the intervals differ by a practically important amount?
+
+Subset model prediction interval
+
+```{r}
+x.subset <- model.matrix(lm.fit.subset)
+x0.subset <- apply(x.subset,2,median)
+pi<- predict(lm.fit.subset,new=data.frame(t(x0.subset)),interval="prediction")
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]))
+```
+
+
+Full model prediction interval
+
+```{r}
+x.full <- model.matrix(lm.fit.full)
+x0.full <- apply(x.full,2,median)
+pi<-predict(lm.fit.full,new=data.frame(t(x0.full)),interval="prediction")
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]))
+```
+
+The full model does have a smaller prediction window.  We don't see a big difference for the prediction intervals for the 2 models. 
+
+### (c) For the smaller model, examine all the observations from case numbers 25 to 50. Which two observations seem particularly anomalous? 
+
+We plotted the features and examined the raw data and determined that case numbers 39 and 42 are potential anomalies or represent extreme values for the predictors.
+
+```{r}
+#plot( model.matrix(lm.fit.subset)[25:50,2], main ="age")
+#plot( model.matrix(lm.fit.subset)[25:50,3],main = "weigh")
+#plot( model.matrix(lm.fit.subset)[25:50,4],main = "height")
+#plot( model.matrix(lm.fit.subset)[25:50,5], main = "abdom")
+#pander(data.frame(model.matrix(lm.fit.subset)[25:50,2:5]))
+##Based on the above we see 39,42 are the outliers.
+
+pander(data.frame(model.matrix(lm.fit.subset)[c(39,42),2:5]), caption = "Possible outliers in dataset fat.")
+```
+
+### (d) Recompute the 95% prediction interval for median predictor values after these two anomalous cases have been excluded from the data. Did this make much difference to the outcome?
+
+```{r}
+df.reduced <- fat[-c(39,42),]
+lm.fit.subset.outlier.redacted <- lm(brozek ~ age + weight+height + abdom, data=df.reduced)
+x.subset <- model.matrix(lm.fit.subset.outlier.redacted)
+x0.subset <- apply(x.subset,2,median)
+pi<-predict(lm.fit.subset.outlier.redacted,new=data.frame(t(x0.subset)),interval="prediction")
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]))
+```
+
+The prediction interval has gotten smaller but the removal of the outliers has not changed the size of the prediction interval by a lot. If we look at what happends when we perform this at the extreme values of the model parameters we might get another answer to this question. 
+
+Prediction interval for $brozek \sim age + weight+height + abdom$ at max of predictors
+
+```{r}
+x.subset <- model.matrix(lm.fit.subset)
+x0.subset <- apply(x.subset,2,max)
+pi <-predict(lm.fit.subset,new=data.frame(t(x0.subset)),interval="prediction")
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]))
+```
+
+Prediction interval for $brozek \sim age + weight+height + abdom$ at max of predictors. Model fit without outliers.
+
+
+```{r}
+x.subset <- model.matrix(lm.fit.subset.outlier.redacted)
+x0.subset <- apply(x.subset,2,max)
+pi <-predict(lm.fit.subset.outlier.redacted,new=data.frame(t(x0.subset)),interval="prediction")
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]))
+```
+
+We see that the differnce prediction interval sizes is greater at the extremes of the predictors. 
