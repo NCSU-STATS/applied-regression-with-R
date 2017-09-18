@@ -40,6 +40,8 @@ data(fat, package="faraway")
 ```{r, echo=FALSE}
 lm.fit.subset <- lm(brozek ~ age + weight+height + abdom, data=fat)
 lm.fit.full<-lm(brozek ~ age + weight + height + neck + chest + abdom + hip + thigh + knee + ankle + biceps + forearm + wrist, data=fat)
+
+anova(lm.fit.subset,lm.fit.full)
 ```
 
 $brozek \sim age + weight+height + abdom$

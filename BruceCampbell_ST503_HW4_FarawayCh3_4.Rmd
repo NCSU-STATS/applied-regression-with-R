@@ -47,6 +47,7 @@ lm.fit <- lm(taste ~ Acetic + H2S + Lactic, data=cheddar)
 
 ```{r, echo=FALSE}
 tidy(lm.fit)
+kable(data.frame(r.squared = summary(lm.fit)$r.squared))
 ```
 
 We see that $H2S$ and $Lactic$ are significant to the $5\%$ level. 
@@ -103,7 +104,7 @@ pander(data.frame(data.element), caption ="Data sample")
 response.orig <- (data.element) %*% beta.hat    
 #change the of our data element H2S by +0.01  
 data.element[1,3] <- data.element[1,3] + 0.01
-pander(data.frame(data.element), caption ="Data sample data element H2S by +0.01")
+pander(data.frame(data.element), caption ="Data sample data element H2S increased by +0.01")
 response.mod <- (data.element) %*% beta.hat
 pander(data.frame(response.difference = (response.mod - response.orig)))
 ```
@@ -211,21 +212,36 @@ anova(lm.fit.reduced,lm.fit)
 
 Just as above we see that the F-statistic for the reduced model has a p-value that is the same as the p-value for the t-statistic given above for the coefficient $\beta_{takers}$ 
 
-REVISIT!
-Thinking for a moment on proving this equivalemce more formally, we know that the $t$ and $F$ distributions are related by $T \sim t_n \implies T^2 \sim F_{1,n}$ We know that the F-test is derived from the generalized likelihood ratio test and that in our case with the assumption of normal errors the MLE of the parameters is multivariate normal
-$$\hat{\beta} \sim N(\beta, \sigma (\textbf{X}^\intercal \textbf{X} )^{-1} )$$. Also, $\epsilon_i \sim N(0,\sigma^2) \implies \frac{\epsilon_i^2}{\sigma^2} \sim \chi^2_1$ and that $$\sum\limits_{i=1}^{n} \chi^2_1 \sim  \chi^2_n$$.  We can see how $RSS_\omega$ and $RSS_\Omega$ come up in the F-test as sums of squares of normal random variables.  We should be able to show that the $T^2$ comes out of a particular F-test situation where the degress of freedom of $\omega$ and $\Omega$ differ by 1. 
-REVISIT!
-
-
 ##Problem 3.5 $R^2$ and the F-test
 
-Find a formula relating R 2 and the F-test for the regression. 
+###Find a formula relating R 2 and the F-test for the regression. 
+
+Let $\Omega$ be the parameter space for a model in $p$ dimensions and $\omega$ be the parameter space for a model in $q$ dimensions. 
+
+$$R^2_{\Omega} = 1 - \frac{RSS_{\Omega}}{TSS}$$
+$$R^2_{\omega} = 1 - \frac{RSS_{\omega}}{TSS}$$
+Solving for $TSS$ in the first case we have that $TSS=\frac{RSS_{\Omega}}{(1-R^2_{\Omega})}$ and putting this into the the expression for $R^2_{\omega}$ 
+
+$$R^2_{\omega} = 1-\frac{RSS_\omega}{RSS_\Omega} (1-R^2_\Omega)  \implies $$
+
+$$ \frac{RSS_\omega}{RSS_\Omega}R^2_\Omega - R^2_\omega = \frac{RSS_\omega-RSS_\Omega}{RSS_\Omega}  \implies$$
+
+$$ (\frac{RSS_\omega}{RSS_\Omega}R^2_\Omega - R^2_\omega) \frac{dF_\Omega}{df_\Omega-df_\omega} = \frac{(RSS_\omega-RSS_\Omega) /(df_\Omega-df_\omega) }{RSS_\Omega / df_\Omega}  \sim F_{df_\Omega-df_\omega,n -df_\Omega}$$
+
+Another way to think about $R^2$ is that it says something about a model in $\Omega$ versus the null model $y \sim \beta_0$.  $TSS=\sum (y_i -\bar{y})^2$ in this case will be $RSS_{\omega_0}$ - the sum of square residuals for the null model. In this case $df_\omega=1$ and we can manipulate the expression for $R^2 = 1-\frac{RSS_\Omega}{RSS_{\omega_0}}$ directly to get
+
+$$ 1-R^2 =  \frac{RSS_\Omega}{RSS_{\omega_0}}  \implies 1-\frac{RSS_\Omega}{RSS_{\omega_0}} = \frac{R^2}{(1-R^2)}$$
+and that _for the sace of comparing a full model against the null model_ we have
+
+
+$$ \frac{R^2}{(1-R^2)} \frac{p}{p-1} =  \frac{(RSS_{\omega_0}-RSS_\Omega) /(p-1) }{RSS_\Omega / p}  \sim F_{p-1,n -p}$$
+
 
 ##Problem 3.6 MBA Students
 
 _Thirty-nine MBA students were asked about happiness and how this related to their income and social life. The data are found in faraway::happy._
 
-Note, pay attention to warnings in R! GGally has a happy dataset as well.  
+Note, pay attention to warnings in R! GGally has a happy data set as well.  
 
 ```{r,echo=FALSE}
 rm(list = ls())
@@ -260,4 +276,140 @@ Wow, I have NO idea what this question is asking me. The assumptions we make are
 All of these assumptions involve elements beyond the distribution of the measured responses $ \{ y_i \} $. 
 
 
-(c) Use the permutation procedure described in Section 3.3 to test the significance of the money predictor. (d) Plot a histgram of the permutation t-statistics. Make sure you use the the probability rather than frequency version of the histogram. (e) Overlay an appropriate t-density over the histogram. Hint: Use grid <- seq(-3, 3, length = 300) to create a grid of values, then use the dt function to compute the t-density on this grid and the lines function to superimpose the result. (f) Use the bootstrap procedure from Section 3.6 to compute 90% and 95% con- fidence intervals for ??money. Does zero fall within these confidence intervals? Are these results consistent with previous tests?
+###(c) Use the permutation procedure described in Section 3.3 to test the significance of the money predictor. 
+
+```{r, echo=TRUE}
+#summary(lm.fit)$coef[2,]# Est, sterr,t-stat,pval for the  
+nreps <- 4000 
+tstats <- numeric(nreps)
+for(i in 1:nreps)
+{ 
+  lm.resample.money <- lm (happy ~ sample(money)+sex+love+work, data = happy) 
+  tstats [i] <- summary (lm.resample.money )$coef[2,3] #Get the tstatistic for this resmapled model 
+} 
+simulated.pvalue <- mean(abs(tstats)  > abs(summary(lm.fit)$coef[2,])) #Calculate the proportion that exceed the original t-statistic
+
+pander(data.frame(simulated.pvalue=simulated.pvalue))
+```
+WE see that the simulated pvalue based on resampling the $money$ predictor is very close the value we got from performing the t-test on $\beta_{money}$
+
+```{r}
+pvalue.money <-summary(lm.fit)$coef[2,4]
+pander(data.frame(pvalue.money = pvalue.money))
+```
+
+### (d) AND (e) Plot a histgram of the permutation t-statistics. Overlay an appropriate t-density
+
+```{r}
+hist(tstats,30,freq = FALSE)
+grid <- seq(-4, 4, length = 300)
+n <- nrow(happy)
+p <- 4+1 # Four predictors plus the intercept
+df <- n-p
+hist(tstats,30,freq = FALSE)
+curve(dt(x, df=df), add=TRUE,col='red')
+```
+ 
+### (f) Use the bootstrap procedure from Section 3.6 to compute 90% and 95% confidence intervals for $money$. Does zero fall within these confidence intervals? Are these results consistent with previous tests?
+
+```{r}
+nb <- 4000
+coefmat <- matrix(NA,nb,5)
+resids <- residuals(lm.fit)
+preds <- fitted(lm.fit)
+for(i in 1:nb)
+  {
+    booty <- preds + sample(resids, rep=TRUE)
+    bmod <- update(lm.fit, booty ~ .)
+    coefmat[i,] <- coef(bmod)
+}
+colnames(coefmat) <- c("Intercept", "money","sex","love","work")
+coefmat <- data.frame(coefmat)
+apply(coefmat,2,function(x) quantile(x,c(0.05,0.95)))
+```
+
+We see that for a significance of $\alpha=10\%$ that we have enough evidence to reject the null hypothesis that the coefficient for $money$ is zero.  This is the same result for the permutation test and for the t-test that is performed as part of R's ```lm.summary``` routine.  Now we look at the $95$ confidence interval.
+
+```{r}
+apply(coefmat,2,function(x) quantile(x,c(0.025,0.975)))
+
+```
+
+Since $0$ is in the interval for $money$; at a significance of $\alpha=5\%$,  with the data at hand, we do _not_ have enough evidence to reject the null hypothesis that the coefficient for $money$ is zero in the linear model $happy \sim money+sex+love+work$ 
+
+## Problem 4.2 - prediction with the teengamb data set.
+
+Using the teengamb data, fit a model with gamble as the response and the other variables as predictors. 
+
+```{r}
+rm(list = ls())
+data(teengamb, package = "faraway")
+lm.fit <- lm(gamble ~ .,data=teengamb)
+```
+
+###(a) Predict the amount that a male with average (given these data) status, income and verbal score would gamble along with an appropriate 95% CI. 
+
+```{r}
+x <- model.matrix(lm.fit)
+x0 <- apply(x,2,mean)
+#The question asks for a male and here we set that value 
+x0['sex'] <-0
+#predict(lm.fit,new=data.frame(t(x0)))
+pi<- predict(lm.fit,new=data.frame(t(x0)),interval="confidence",level = .95)
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]), caption = "Confidence interval width")
+```
+
+###(b) Repeat the prediction for a male with maximal values (for this data) of status, income and verbal score. Which CI is wider and why is this result expected? 
+
+```{r}
+x <- model.matrix(lm.fit)
+x0 <- apply(x,2,max)
+#The question asks for a male and here we set that value 
+x0['sex'] <-0
+#predict(lm.fit,new=data.frame(t(x0)))
+pi<- predict(lm.fit,new=data.frame(t(x0)),interval="confidence",level = .95)
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]), caption = "Confidence interval width")
+```
+
+
+(c) Fit a model with sqrt(gamble) as the response but with the same predictors. Now predict the response and give a 95% prediction interval for the individual in (a). Take care to give your answer in the original units of the response. 
+
+```{r}
+lm.fit <- lm(sqrt(gamble) ~ .,data=teengamb)
+x <- model.matrix(lm.fit)
+x0 <- apply(x,2,mean)
+x0['sex'] <-0
+pi<- predict(lm.fit,new=data.frame(t(x0)),interval="confidence",level = .95)
+#ORIG
+pi.orig<-c(pi[1]^2,pi[2]^2,pi[3]^2)
+pi.orig
+pander(data.frame(pi.width=pi.orig[3]-pi.orig[2]), caption = "Confidence interval width")
+```
+
+The square root transform is known to stabilize variance and we see that in the smaller prediction interval.  
+
+### (d) Repeat the prediction for the model in (c) for a female with status=20, income=1, verbal = 10. Comment on the credibility of the result.
+
+
+```{r}
+x0['sex'] <-1
+x0['status'] <-20
+x0['income'] <-1
+x0['verbal'] <-10
+
+pi<- predict(lm.fit,new=data.frame(t(x0)),interval="confidence",level = .95)
+#ORIG
+pi
+pi.orig<-c(-pi[1]^2,pi[2]^2,pi[3]^2)
+pi.orig
+pander(data.frame(pi.width=pi.orig[3]-pi.orig[2]), caption = "Confidence interval width")
+
+ggpairs(teengamb)
+
+lm.fit <- lm(gamble ~ .,data=teengamb)
+pi<- predict(lm.fit,new=data.frame(t(x0)),interval="confidence",level = .95)
+pi
+
+```
