@@ -1,0 +1,119 @@
+---
+title: "NCSU ST 503 Discussion 6"
+subtitle: "Probem  6.1 Faraway, Julian J. Linear Models with R CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+## Regression diagnostics with the SAT data set.
+
+_Using the sat dataset, fit a model with the total SAT score as the response and expend, salary, ratio and takers as predictors. Perform regression diagnostics on this model to answer the following questions. Display any plots that are relevant. Do not provide any plots about which you have nothing to say. Suggest possible improvements or corrections to the model where appropriate._
+
+
+
+```{r, echo = FALSE}
+data(sat, package="faraway")
+```
+
+```{r, echo=FALSE}
+lm.fit <- lm(total ~ expend+salary+ratio+takers, data=sat)
+```
+
+### (a) Check the constant variance assumption for the errors.
+```{r}
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+abline(h=0)
+```
+
+To check the assumption of constant variance we plot fitted values against the residuals - looking for any structure in the distribution of values about the theoretical mean value line $E[\epsilon]=0$. There is nothing alarming with this plot, the variance seems relatively constant along the range of the fitted values. 
+
+### (b) Check the normality assumption. 
+
+```{r}
+qqnorm(residuals(lm.fit),ylab="Residuals",main="Q-Q Plot of Residuals")
+qqline(residuals(lm.fit))
+
+qqnorm(scale( residuals(lm.fit),center = TRUE, scale = TRUE),ylab="Residuals",main="Q-Q Plot of Standardized Residuals")
+qqline(scale( residuals(lm.fit),center = TRUE, scale = TRUE) )
+```
+Generally the residuals appear normally distributed in the middle of the range. The empirical distribution is slightly right skewed and there's a single point on the lower quantile that deviates from the theoretical distribution.  
+
+### (c) Check for large leverage points. 
+
+```{r}
+hatv <- hatvalues(lm.fit)
+lev.cut <- 5 *2 * 1/ nrow(sat)
+
+high.leverage <- sat[hatv > lev.cut,]
+pander(high.leverage, caption = "High Leverage Data Elements")
+```
+
+We've used the rule of thumb that points with a leverage greater than $\frac{2 p }{n}$ should be looked at.
+
+### (d) Check for outliers. 
+```{r}
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-5
+n<-nrow(sat)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+```
+
+Since none of the studentized residuals fall outside the interval given by the Bonferroni corrected t-values we claim there are no outliers in the dataset. 
+
+
+### (e) Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+We see the Utah, New Hampshire, and West Virginia are candidate influential points.  The book does not discuss a criteria for selecting influential points from the Cook distances.  
+
+Some guidelines for selecting influential points;
+* points with a Cook distance more than three times the mean Cook distance     
+* points with a Cook distance greater than 4/n
+* points with a cook distance greater than 1 
+
+Here we select points with a Cook distance more than three times the mean Cook distance.  
+```{r}
+cook.distances <-data.frame( cooks.distance(lm.fit))
+names(cook.distances) <- "cook.distance"
+mean.cooks.distance <- mean(cook.distances$cook.distance)
+pander(data.frame(mean.cooks.distance=mean.cooks.distance), caption = "Mean Cook distance")
+influential.points <- cook.distances[cook.distances$cook.distance > 3*mean.cooks.distance,,drop=FALSE]
+
+pander(influential.points, caption = "Points with Cook distance greater than three times the mean Cook distance.")
+```
+
+
+
+
+
+
