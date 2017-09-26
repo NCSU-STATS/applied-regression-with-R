@@ -12,7 +12,7 @@ output: pdf_document
 ---
 ```{r setup, include=FALSE,echo=FALSE}
 rm(list = ls())
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(dev = 'pdf')
 knitr::opts_chunk$set(cache=TRUE)
 knitr::opts_chunk$set(tidy=TRUE)
@@ -31,9 +31,7 @@ library(broom)
 library(printr)
 ```
 
-#Complete exercises # 2 - 5 (parts a and b only for each) from Chapter 6. Complete exercise # 8 from Chapter 6.
-
-### 6.2 Using the teengamb dataset, fit a model with gamble as the response and the other variables as predictors. 
+## 6.2 Using the teengamb dataset, fit a model with gamble as the response and the other variables as predictors. 
 
 ```{r}
 rm(list = ls())
@@ -55,7 +53,7 @@ plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
-For reference we plot below what contant $N(0,1)$ error over the same range of the response would look like for the same number of data points.  We ran this a number of times to get a good idea of what contant variance looks like with this number of points. It's helpful to calibrate this way when evaluating whether variance is constant for a small and medium data sets. 
+For reference we plot below what constant $N(0,1)$ error over the same range of the response would look like for the same number of data points.  We ran this a number of times to get a good idea of what constant variance looks like with this number of points. It's helpful to calibrate this way when evaluating whether variance is constant for a small and medium data sets. 
 
 ```{r}
 x<-runif(47,min = 0, max=8.5)
@@ -73,7 +71,7 @@ qqline(scale( residuals(lm.fit),center = TRUE, scale = TRUE) )
 
 We see clear evidence of long tails in the distribution of the residuals. 
 
-### 6.3 For the prostate data, fit a model with lpsa as the response and the other variables as predictors. 
+## 6.3 For the prostate data, fit a model with lpsa as the response and the other variables as predictors. 
 
 ```{r}
 rm(list = ls())
@@ -88,7 +86,7 @@ plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
-The variance of the residuals appears contant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
+The variance of the residuals appears constant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
 
 ### (b) Check the normality assumption. 
 
@@ -97,9 +95,9 @@ qqnorm(scale( residuals(lm.fit),center = TRUE, scale = TRUE),ylab="Residuals",ma
 qqline(scale( residuals(lm.fit),center = TRUE, scale = TRUE) )
 ```
 
-The studentized residuals appear to be lighly long tailed.
+The studentized residuals appear to be slightly long tailed.
 
-###6.4 For the swiss data, fit a model with Fertility as the response and the other variables as predictors. 
+##6.4 For the swiss data, fit a model with Fertility as the response and the other variables as predictors. 
 
 ```{r}
 rm(list = ls())
@@ -114,7 +112,7 @@ plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
-The variance of the residuals appears contant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
+The variance of the residuals appears constant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
 
 ### (b) Check the normality assumption. 
 
@@ -123,7 +121,7 @@ qqnorm(scale( residuals(lm.fit),center = TRUE, scale = TRUE),ylab="Residuals",ma
 qqline(scale( residuals(lm.fit),center = TRUE, scale = TRUE) )
 ```
 
-### 6.5 Using the cheddar data, fit a model with taste as the response and the other three variables as predictors. 
+## 6.5 Using the cheddar data, fit a model with taste as the response and the other three variables as predictors. 
 
 
 ```{r}
@@ -139,7 +137,7 @@ plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
-The variance of the residuals appears contant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
+The variance of the residuals appears constant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
 
 ### (b) Check the normality assumption. 
 
@@ -151,7 +149,7 @@ qqline(scale( residuals(lm.fit),center = TRUE, scale = TRUE) )
 The standardized residuals appear to be normally distributed. 
 
 
-### 6.6 Using the happy data, fit a model with happy as the response and the other four variables as predictors. 
+## 6.6 Using the happy data, fit a model with happy as the response and the other four variables as predictors. 
 
 
 ```{r}
@@ -167,7 +165,7 @@ plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
-We see structure in the plot of the residuals.  There is serial correlation in the residuals - which is a red flag for our model. The variance of the residuals appears slightly lower over the low end of the range of the response, and higher at the high end of the response.  This is difficult to judge though since there ar eonly a few points at the low end of the range of the response.   
+We see structure in the plot of the residuals.  There is serial correlation in the residuals - which is a red flag for our model. The variance of the residuals appears slightly lower over the low end of the range of the response, and higher at the high end of the response.  This is difficult to judge though since there are only a few points at the low end of the range of the response.   
 
 ### (b) Check the normality assumption. 
 
@@ -179,22 +177,160 @@ qqline(scale( residuals(lm.fit),center = TRUE, scale = TRUE) )
 
 The standardized residuals appear to be normally distributed.  This is interesting in light of the results from part a).
 
+## 6.8 For the divusa data, fit a model with divorce as the response and the other variables, except year as predictors.
 
 
 
+```{r, echo = FALSE}
+rm(list = ls())
+data(divusa, package="faraway")
+```
+
+```{r, echo=FALSE}
+lm.fit <- lm(divorce ~  unemployed+femlab+marriage+birth+military, data=divusa)
+```
+
+### (a) Check the constant variance assumption for the errors.
+```{r}
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals", main = TeX("$divorce \\sim  unemployed+femlab+marriage+birth+military$"))
+abline(h=0)
+```
+
+We see clear structure and  serial correlation in the residuals.  We may want to plot the response against some of the predictors to look for which ones may be candidates for polynomial terms in the model.  
+
+### (b) Check the normality assumption. 
+
+```{r}
+qqnorm(scale( residuals(lm.fit),center = TRUE, scale = TRUE),ylab="Residuals",main="Q-Q Plot of Standardized Residuals")
+qqline(scale( residuals(lm.fit),center = TRUE, scale = TRUE) )
+```
+There is some evidence for mild long tail behavior in the residuals. 
+
+### (c) Check for large leverage points. 
+
+```{r}
+hatv <- hatvalues(lm.fit)
+lev.cut <- 6 *2 * 1/ nrow(divusa)
+
+high.leverage <- divusa[hatv > lev.cut,]
+pander(high.leverage, caption = "High Leverage Data Elements")
+```
+
+We've used the rule of thumb that points with a leverage greater than $\frac{2 p }{n}$ should be looked at.
+
+### (d) Check for outliers. 
+```{r}
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-6
+n<-nrow(divusa)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+```
+
+Since none of the studentized residuals fall outside the interval given by the Bonferroni corrected t-values we claim there are no outliers in the dataset. 
+
+
+### (e) Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+We see two clear high leverage points - elements 26 and 27. A third is labelled by R, but the leverage doesn't seem very large. The book does not discuss a criteria for selecting influential points from the Cook distances.  
+
+Some guidelines for selecting influential points;
+* points with a Cook distance more than three times the mean Cook distance     
+* points with a Cook distance greater than 4/n
+* points with a cook distance greater than 1 
+
+Here we select points with a Cook distance more than three times the mean Cook distance.  
+
+```{r}
+cook.distances <-data.frame( cooks.distance(lm.fit))
+names(cook.distances) <- "cook.distance"
+mean.cooks.distance <- mean(cook.distances$cook.distance)
+pander(data.frame(mean.cooks.distance=mean.cooks.distance), caption = "Mean Cook distance")
+influential.points <- cook.distances[cook.distances$cook.distance > 3*mean.cooks.distance,,drop=FALSE]
+
+pander(influential.points, caption = "Points with Cook distance greater than three times the mean Cook distance.")
+```
+
+
+### (f) Check for structure in the model. 
+
+We saw evidence for additional structure not accounted for by the model.  First a plot of the variables may help guide the next steps. 
+
+```{r}
+ggpairs(within(divusa,rm("year"))) + 
+  theme(axis.line=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank())
+```
+
+We plotted residuals against all the predictors and found that $femlab$ and $marriage$ had the most structure.  These are the likely candidates for including additional terms in the regression. It's apparent that a third order polynomial would be appropriate. We plot $birth$ versus residuals because we found out later that adding in polynomial terms for that reduced the structure we saw in the residuals versus fitted plot.
+
+```{r}
+
+plot(divusa$marriage,residuals(lm.fit),xlab="marriage",ylab="Residuals",main = "marriage versus residuals")
+
+plot(divusa$femlab,residuals(lm.fit),xlab="femlab",ylab="Residuals", main= "femlab versus residuals")
+
+plot(divusa$birth,residuals(lm.fit),xlab="birth",ylab="Residuals",main = "birth versus residuals")
+
+```
+
+Before we try to remove the unexplained structure let's investigate the partial regression / added variable plot for these variables.  
+
+This is the partial regression plot for $femlab$
+```{r}
+
+d <- residuals(lm(divorce ~  unemployed+marriage+birth+military,divusa))
+m <- residuals(lm(femlab ~  unemployed+marriage+birth+military,divusa))
+plot(m,d,xlab="femlab residuals",ylab="divorce residuals",main = "Partial regression plot for femlab")
+```
+
+This is the partial regression plot for $marriage$
+
+```{r}
+
+d <- residuals(lm(divorce ~  unemployed+femlab+birth+military,divusa))
+m <- residuals(lm(marriage ~  unemployed+femlab+birth+military,divusa))
+plot(m,d,xlab="marriage residuals",ylab="divorce residuals", main = "partial regression plot for marriage")
+```
+
+This is the partial regression plot for $birth$
+
+```{r}
+d <- residuals(lm(divorce ~  unemployed+femlab+marriage+military,divusa))
+m <- residuals(lm(birth ~  unemployed+femlab+marriage+military,divusa))
+plot(m,d,xlab="birth residuals",ylab="divorce residuals",main = "partial regression plot for birth")
+```
 
 
 
+I'm not sure why we don't see non-linearity in these plots.  I'll return to the theory behind this and investigate - hopefully before the homework is due!  for now let's see if introduction of polynomial terms reduces the structure in the residuals versus fitted plot. 
 
 
+We tried adding in polynomial terms for marriage and femlab.  It was not until we added polynomial terms for birth and marriage that the structure in the residuals was reduced.  The residuals versus fitted for the models with polynomial terms 
 
 
+```{r, echo=FALSE}
+lm.fit <- lm(divorce ~  unemployed+femlab+marriage+birth+military  +I(marriage^2) + I(marriage^3) , data=divusa)
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals", main = "Polynomial terms added for birth")
+abline(h=0)
+```
 
-
-
-
-
-
+```{r, echo=FALSE}
+lm.fit <- lm(divorce ~  unemployed+femlab+marriage+birth+military  +I(birth^2) + I(birth^3)+I(marriage^2) + I(marriage^3), data=divusa)
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals", main = "Polynomial terms added for birth and marriage")
+abline(h=0)
+```
 
 
 
