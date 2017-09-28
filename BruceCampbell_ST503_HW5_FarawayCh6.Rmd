@@ -41,15 +41,15 @@ lm.fit <- lm(gamble ~ ., data=teengamb)
 ### (a) Check the constant variance assumption for the errors.
 
 ```{r}
-plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+plot(fitted(lm.fit),rstandard(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
-To check the assumption of constant variance we plot fitted values against the residuals - looking for any structure in the distribution of values about the theoretical mean value line $E[\epsilon]=0$. There appears to be structure and heteroskedasticity in the plot.  Below we plot the fitted values against the residuals for a model where the response has been transformed with the square root function. We see less structure and a more evenly distributed variance.  We do see even with the transformed response evidence that the variance is not constant. 
+To check the assumption of constant variance we plot fitted values against the standardized residuals - looking for any structure in the distribution of values about the theoretical mean value line $E[\epsilon]=0$. There appears to be structure and heteroskedasticity in the plot.  Below we plot the fitted values against the residuals for a model where the response has been transformed with the square root function. We see less structure and a more evenly distributed variance.  We do see even with the transformed response evidence that the variance is not constant. 
 
 ```{r}
 lm.fit <- lm(sqrt(gamble) ~ ., data=teengamb)
-plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+plot(fitted(lm.fit),rstandard(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
@@ -82,11 +82,11 @@ lm.fit <- lm(lpsa ~ ., data=prostate)
 ### (a) Check the constant variance assumption for the errors.
 
 ```{r}
-plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+plot(fitted(lm.fit),rstandard(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
-The variance of the residuals appears constant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
+The variance of the standardized residuals appears constant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
 
 ### (b) Check the normality assumption. 
 
@@ -108,11 +108,11 @@ lm.fit <- lm(Fertility ~ ., data=swiss)
 ### (a) Check the constant variance assumption for the errors.
 
 ```{r}
-plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+plot(fitted(lm.fit),rstandard(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
-The variance of the residuals appears constant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
+The variance of the standardized residuals appears constant over the range of the fitted values.  We're comfortable claiming homoskedasticity of residuals for this data set. 
 
 ### (b) Check the normality assumption. 
 
@@ -133,7 +133,7 @@ lm.fit <- lm(taste ~ ., data=cheddar)
 ### (a) Check the constant variance assumption for the errors.
 
 ```{r}
-plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+plot(fitted(lm.fit),rstandard(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
@@ -161,7 +161,7 @@ lm.fit <- lm(happy ~ ., data=happy)
 ### (a) Check the constant variance assumption for the errors.
 
 ```{r}
-plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+plot(fitted(lm.fit),rstandard(lm.fit),xlab="Fitted",ylab="Residuals")
 abline(h=0)
 ```
 
@@ -192,7 +192,7 @@ lm.fit <- lm(divorce ~  unemployed+femlab+marriage+birth+military, data=divusa)
 
 ### (a) Check the constant variance assumption for the errors.
 ```{r}
-plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals", main = TeX("$divorce \\sim  unemployed+femlab+marriage+birth+military$"))
+plot(fitted(lm.fit),rstandard(lm.fit),xlab="Fitted",ylab="Residuals", main = TeX("$divorce \\sim  unemployed+femlab+marriage+birth+military$"))
 abline(h=0)
 ```
 
@@ -233,7 +233,6 @@ pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-
 
 Since none of the studentized residuals fall outside the interval given by the Bonferroni corrected t-values we claim there are no outliers in the dataset. 
 
-
 ### (e) Check for influential points. 
 
 We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
@@ -261,7 +260,6 @@ influential.points <- cook.distances[cook.distances$cook.distance > 3*mean.cooks
 pander(influential.points, caption = "Points with Cook distance greater than three times the mean Cook distance.")
 ```
 
-
 ### (f) Check for structure in the model. 
 
 We saw evidence for additional structure not accounted for by the model.  First a plot of the variables may help guide the next steps. 
@@ -288,6 +286,7 @@ plot(divusa$birth,residuals(lm.fit),xlab="birth",ylab="Residuals",main = "birth 
 Before we try to remove the unexplained structure let's investigate the partial regression / added variable plot for these variables.  
 
 This is the partial regression plot for $femlab$
+
 ```{r}
 
 d <- residuals(lm(divorce ~  unemployed+marriage+birth+military,divusa))
@@ -312,10 +311,7 @@ m <- residuals(lm(birth ~  unemployed+femlab+marriage+military,divusa))
 plot(m,d,xlab="birth residuals",ylab="divorce residuals",main = "partial regression plot for birth")
 ```
 
-
-
 I'm not sure why we don't see non-linearity in these plots.  I'll return to the theory behind this and investigate - hopefully before the homework is due!  for now let's see if introduction of polynomial terms reduces the structure in the residuals versus fitted plot. 
-
 
 We tried adding in polynomial terms for marriage and femlab.  It was not until we added polynomial terms for birth and marriage that the structure in the residuals was reduced.  The residuals versus fitted for the models with polynomial terms 
 
