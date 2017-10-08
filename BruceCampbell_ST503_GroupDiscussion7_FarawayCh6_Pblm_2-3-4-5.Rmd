@@ -1,0 +1,474 @@
+---
+title: "NCSU ST 503 Discussion 7"
+subtitle: "Probems  6.2,6.3,6.4,6.5 Parts c,d,e,f Faraway, Julian J. Linear Models with R CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+## 6.2 Using the teengamb dataset, fit a model with gamble as the response and the other variables as predictors. 
+
+### (c) Check for large leverage points. 
+
+```{r}
+rm(list = ls())
+data(teengamb, package="faraway")
+```
+
+```{r}
+df <-teengamb 
+numPredictors <- ( ncol(df)-1)
+lm.fit <- lm(gamble ~ ., data=df)
+hatv <- hatvalues(lm.fit)
+lev.cut <- (numPredictors+1) *2 * 1/ nrow(df)
+high.leverage <- df[hatv > lev.cut,]
+pander(high.leverage, caption = "High Leverage Data Elements")
+```
+
+We've used the rule of thumb that points with a leverage greater than $\frac{2 p }{n}$ should be looked at.
+
+### (d) Check for outliers. 
+
+```{r}
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-numPredictors+1
+n<-nrow(df)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+
+outlier.index <- abs(studentized.residuals) > abs(t.val.alpha)
+
+outliers <- df[outlier.index==TRUE,]
+
+if(nrow(outliers)>=1)
+{
+  pander(outliers, caption = "outliers")
+}
+
+```
+
+Here we look for studentized residuals that fall outside the interval given by the Bonferroni corrected t-values.
+
+### (e) Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+### (f) Check for structure in the model. 
+
+Plot residuals versus predictors
+
+
+```{r}
+
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  
+  plot(df[,predictor],residuals(lm.fit),xlab=,ylab="Residuals",main = paste(predictor, " versus residuals", sep = ''))
+
+}
+
+```
+
+Perform partial regression
+
+```{r}
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+lm.formula <- formula(lm.fit)
+response <- lm.formula[[2]] 
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  others <- predictors[  which(predictors != predictor) ]
+  d.formula <-paste(response, " ~ ",sep='')
+  m.formula <-paste(predictor, " ~ ",sep='')
+  
+  for(j in 1:(length(others)-1))
+  { 
+    d.formula <-paste(d.formula, others[j]," + ", sep='')
+    m.formula <-paste(m.formula, others[j]," + ", sep='')
+  }
+  d.formula <-paste(d.formula, others[length(others)], sep='')
+  d.formula <-formula(d.formula)
+
+  m.formula <-paste(m.formula, others[length(others)], sep='')
+  m.formula <-formula(m.formula)
+
+  d <- residuals(lm(d.formula,df))
+  
+  m <- residuals(lm(m.formula,df))
+  
+  plot(m,d,xlab=paste(predictor, " residuals",sep=''),ylab="response residuals",main = paste("Partial regression plot for " , predictor,sep=''))
+
+}
+```
+
+
+## 6.3 For the prostate data, fit a model with lpsa as the response and the other variables as predictors. 
+
+```{r}
+rm(list = ls())
+data(prostate, package="faraway")
+lm.fit <- lm(lpsa ~ ., data=prostate)
+```
+
+
+```{r}
+df <-prostate 
+numPredictors <- ( ncol(df)-1)
+hatv <- hatvalues(lm.fit)
+lev.cut <- (numPredictors+1) *2 * 1/ nrow(df)
+high.leverage <- df[hatv > lev.cut,]
+pander(high.leverage, caption = "High Leverage Data Elements")
+```
+
+We've used the rule of thumb that points with a leverage greater than $\frac{2 p }{n}$ should be looked at.
+
+### (d) Check for outliers. 
+
+```{r}
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-numPredictors+1
+n<-nrow(df)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+
+outlier.index <- abs(studentized.residuals) > abs(t.val.alpha)
+
+outliers <- df[outlier.index==TRUE,]
+
+if(nrow(outliers)>=1)
+{
+  pander(outliers, caption = "outliers")
+}
+
+```
+
+Here we look for studentized residuals that fall outside the interval given by the Bonferroni corrected t-values.
+
+### (e) Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+### (f) Check for structure in the model. 
+
+Plot residuals versus predictors
+
+```{r}
+
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  
+  plot(df[,predictor],residuals(lm.fit),xlab=,ylab="Residuals",main = paste(predictor, " versus residuals", sep = ''))
+
+}
+
+```
+
+Perform partial regression
+
+```{r}
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+lm.formula <- formula(lm.fit)
+response <- lm.formula[[2]] 
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  others <- predictors[  which(predictors != predictor) ]
+  d.formula <-paste(response, " ~ ",sep='')
+  m.formula <-paste(predictor, " ~ ",sep='')
+  
+  for(j in 1:(length(others)-1))
+  { 
+    d.formula <-paste(d.formula, others[j]," + ", sep='')
+    m.formula <-paste(m.formula, others[j]," + ", sep='')
+  }
+  d.formula <-paste(d.formula, others[length(others)], sep='')
+  d.formula <-formula(d.formula)
+
+  m.formula <-paste(m.formula, others[length(others)], sep='')
+  m.formula <-formula(m.formula)
+
+  d <- residuals(lm(d.formula,df))
+  
+  m <- residuals(lm(m.formula,df))
+  
+  plot(m,d,xlab=paste(predictor, " residuals",sep=''),ylab="response residuals",main = paste("Partial regression plot for " , predictor,sep=''))
+
+}
+```
+
+
+
+##6.4 For the swiss data, fit a model with Fertility as the response and the other variables as predictors. 
+
+```{r}
+rm(list = ls())
+data(swiss, package="faraway")
+lm.fit <- lm(Fertility ~ ., data=swiss)
+```
+
+
+```{r}
+df <-swiss 
+numPredictors <- ( ncol(df)-1)
+hatv <- hatvalues(lm.fit)
+lev.cut <- (numPredictors+1) *2 * 1/ nrow(df)
+high.leverage <- df[hatv > lev.cut,]
+pander(high.leverage, caption = "High Leverage Data Elements")
+```
+
+We've used the rule of thumb that points with a leverage greater than $\frac{2 p }{n}$ should be looked at.
+
+### (d) Check for outliers. 
+
+```{r}
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-numPredictors+1
+n<-nrow(df)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+
+outlier.index <- abs(studentized.residuals) > abs(t.val.alpha)
+
+outliers <- df[outlier.index==TRUE,]
+
+if(nrow(outliers)>=1)
+{
+  pander(outliers, caption = "outliers")
+}
+
+```
+
+Here we look for studentized residuals that fall outside the interval given by the Bonferroni corrected t-values.
+
+### (e) Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+### (f) Check for structure in the model. 
+
+Plot residuals versus predictors
+
+```{r}
+
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  
+  plot(df[,predictor],residuals(lm.fit),xlab=,ylab="Residuals",main = paste(predictor, " versus residuals", sep = ''))
+
+}
+
+```
+
+Perform partial regression
+
+```{r}
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+lm.formula <- formula(lm.fit)
+response <- lm.formula[[2]] 
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  others <- predictors[  which(predictors != predictor) ]
+  d.formula <-paste(response, " ~ ",sep='')
+  m.formula <-paste(predictor, " ~ ",sep='')
+  
+  for(j in 1:(length(others)-1))
+  { 
+    d.formula <-paste(d.formula, others[j]," + ", sep='')
+    m.formula <-paste(m.formula, others[j]," + ", sep='')
+  }
+  d.formula <-paste(d.formula, others[length(others)], sep='')
+  d.formula <-formula(d.formula)
+
+  m.formula <-paste(m.formula, others[length(others)], sep='')
+  m.formula <-formula(m.formula)
+
+  d <- residuals(lm(d.formula,df))
+  
+  m <- residuals(lm(m.formula,df))
+  
+  plot(m,d,xlab=paste(predictor, " residuals",sep=''),ylab="response residuals",main = paste("Partial regression plot for " , predictor,sep=''))
+
+}
+```
+
+
+
+## 6.5 Using the cheddar data, fit a model with taste as the response and the other three variables as predictors. 
+
+
+```{r}
+rm(list = ls())
+data(cheddar, package="faraway")
+lm.fit <- lm(taste ~ ., data=cheddar)
+```
+
+
+```{r}
+df <-cheddar 
+numPredictors <- ( ncol(df)-1)
+hatv <- hatvalues(lm.fit)
+lev.cut <- (numPredictors+1) *2 * 1/ nrow(df)
+high.leverage <- df[hatv > lev.cut,]
+pander(high.leverage, caption = "High Leverage Data Elements")
+```
+
+We've used the rule of thumb that points with a leverage greater than $\frac{2 p }{n}$ should be looked at.
+
+### (d) Check for outliers. 
+
+```{r}
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-numPredictors+1
+n<-nrow(df)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+
+outlier.index <- abs(studentized.residuals) > abs(t.val.alpha)
+
+outliers <- df[outlier.index==TRUE,]
+
+if(nrow(outliers)>=1)
+{
+  pander(outliers, caption = "outliers")
+}
+
+```
+
+Here we look for studentized residuals that fall outside the interval given by the Bonferroni corrected t-values.
+
+### (e) Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+### (f) Check for structure in the model. 
+
+Plot residuals versus predictors
+
+```{r}
+
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  
+  plot(df[,predictor],residuals(lm.fit),xlab=,ylab="Residuals",main = paste(predictor, " versus residuals", sep = ''))
+
+}
+
+```
+
+Perform partial regression
+
+```{r}
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+lm.formula <- formula(lm.fit)
+response <- lm.formula[[2]] 
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  others <- predictors[  which(predictors != predictor) ]
+  d.formula <-paste(response, " ~ ",sep='')
+  m.formula <-paste(predictor, " ~ ",sep='')
+  
+  for(j in 1:(length(others)-1))
+  { 
+    d.formula <-paste(d.formula, others[j]," + ", sep='')
+    m.formula <-paste(m.formula, others[j]," + ", sep='')
+  }
+  d.formula <-paste(d.formula, others[length(others)], sep='')
+  d.formula <-formula(d.formula)
+
+  m.formula <-paste(m.formula, others[length(others)], sep='')
+  m.formula <-formula(m.formula)
+
+  d <- residuals(lm(d.formula,df))
+  
+  m <- residuals(lm(m.formula,df))
+  
+  plot(m,d,xlab=paste(predictor, " residuals",sep=''),ylab="response residuals",main = paste("Partial regression plot for " , predictor,sep=''))
+
+}
+```
+
+
+
+
