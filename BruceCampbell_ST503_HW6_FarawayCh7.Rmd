@@ -29,7 +29,259 @@ library(ggplot2)
 library(GGally)
 library(broom)
 library(printr)
+library(faraway)
+```
+
+# 7.4 longley data analyis
+
+```{r, echo = FALSE}
+require(stats)
+
+data(longley, package="datasets")
+lm.fit <- lm(Employed ~ ., data=longley)
+faraway::sumary(lm.fit)
+```
+
+### (a) Compute and comment on the condition numbers.  
+
+We were not asked to do this, but it's interesting - so we give it a try. 
+```{r}
+x <- model.matrix(lm.fit)[,-1]
+e <- eigen(t(x) %*% x)
+pander(data.frame(ev=t(e$val)),caption = "eigenvalues")
+pander(data.frame(rcond =t(sqrt(e$val[1]/e$val))),caption="condition numbers")
+```
+
+We see a high condition number $\kappa$, and note that $\sqrt{\frac{\lambda_1}{\lambda_i}}>30$ for $i=4,5$ as well
+where $\lambda_i$ denotes the sorted eigenvalues.
+
+### (b) Compute and comment on the correlations between the predictors. 
+
+```{r}
+corr.mat <- round(cor(longley[, -which(names(longley) %in% c("Employed"))]),2)
+pander(data.frame(corr.mat=corr.mat), caption = "Correlation")
+```
+
+We see a significant amount of correlation between the predictors. 
+
+### (c) Compute the variance inflation factors.
+
+```{r}
+pander(data.frame(VIF=t(vif(x))),caption="Variance Inflation Factors")
+```
+
+The variance inflation factor for all but the Armed.Forces predictor is large.
+
+We look at a reduced model below.  This was iteratively defined by removing predictors with
+high condition numbers and VIF factors.  We note that the $R^2$ is comparable to the original model. 
+
+```{r}
+lm.fit.reduced <- lm(Employed ~ GNP.deflator +Unemployed+ Armed.Forces , data=longley)
+faraway::sumary(lm.fit.reduced)
+
+x.reduced <- model.matrix(lm.fit.reduced)[,-1]
+e.reduced <- eigen(t(x.reduced) %*% x.reduced)
+
+pander(data.frame(ev=t(e.reduced$val)),caption = "eigenvalues")
+pander(data.frame(rcond =t(sqrt(e.reduced$val[1]/e.reduced$val))),caption="condition numbers")
+
+corr.mat.reduced <- round(cor(longley[, -which(names(longley) %in% c("Employed","GNP","Population","Year"))]),2)
+corr.mat.reduced 
+
+pander(data.frame(VIF=t(vif(x.reduced))),caption="Variance Inflation Factors")
+
 ```
 
 
-Complete exercises # 4 (b and c), 6, 8 (skip "condition numbers" in part a) from Chapter 7.
+# 7.6 cheddar dataset analysis
+Using the cheddar data, fit a linear model with taste as the response and the other three variables as predictors. 
+
+```{r}
+rm(list = ls())
+data(cheddar, package="faraway")
+lm.fit <- lm(taste ~ ., data=cheddar)
+faraway::sumary(lm.fit)
+```
+
+### (a) Is the predictor Lactic statistically significant in this model? 
+
+We see that lactic is statistically significant at a level of $\alpha=0.05$ with a p-value of 0.031
+
+### (b) Give the R command to extract the p-value for the test of $\beta_{lactic} = 0$. Hint: look at faraway::sumary()$coef.
+
+After some trial and error we got the command below. 
+
+```{r,echo=TRUE}
+summary(lm.fit)$coefficients[4,4]
+```
+
+We really do not like to index model parameters by the numerical index.  If this were production code we'd look for a way to use the predictor name directly.  StackOverflow provided us the hint for the code below. 
+
+```{r, echo=TRUE}
+coef(summary(lm.fit))["Lactic","Pr(>|t|)"]
+```
+
+### (c) Add normally distributed errors to Lactic with mean zero and standard deviation 0.01 and refit the model. Now what is the p-value for the previous test? 
+
+
+```{r}
+df <- cheddar
+df$Lactic <- df$Lactic + rnorm(nrow(df),mean = 0,sd = 0.01)
+lm.fit <- lm(taste ~ ., data=df)
+coef(summary(lm.fit))["Lactic","Pr(>|t|)"]
+```
+
+### (d) Repeat this same calculation of adding errors to Lactic 1000 times within for loop. Save the p-values into a vector. Report on the average p-value. Does this much measurement error make a qualitative difference to the conclusions? 
+
+```{r}
+simulationCount <- 5000
+bvalues <- matrix(0, nrow = simulationCount, ncol = 1)
+for (i in 1:simulationCount)
+  { 
+  df <- cheddar
+  df$Lactic <- df$Lactic + rnorm(nrow(df),mean = 0,sd = 0.01)
+  lm.fit <- lm(taste ~ ., data=df)
+  bvalues[i] <- coef(summary(lm.fit))["Lactic","Pr(>|t|)"]
+} 
+histVales <- hist(bvalues, 100,freq = FALSE,plot = FALSE)
+mean.bval = mean(bvalues)
+sd.bval <- sd(bvalues)
+
+plot(histVales$mids,histVales$density,col='blue',pch='*')
+lines(histVales$mids,dnorm(histVales$mids,mean.bval,sd.bval), type = "l",col="red")
+legend("topleft", title.col = "black",c("simulated","fitted normal" ),text.col =c("blue","red"),text.font = 1, cex = 1)
+
+pander(data.frame(mean.bval=mean.bval,sd.bval=sd.bval), caption = "Mean and sd of Lactic pvalues from simulation")
+```
+
+We see that the p-values are not dramatically affected by the addition of noise.  Above we have plotted the empirical distribution of the p-values and a normal with the same mean and standard deviation.
+
+### (e) Repeat the previous question but with a standard deviation of 0.1. Does this much measurement error make an important difference?
+
+```{r}
+simulationCount <- 5000
+bvalues <- matrix(0, nrow = simulationCount, ncol = 1)
+for (i in 1:simulationCount)
+  { 
+  df <- cheddar
+  df$Lactic <- df$Lactic + rnorm(nrow(df),mean = 0,sd = 0.1)
+  lm.fit <- lm(taste ~ ., data=df)
+  bvalues[i] <- coef(summary(lm.fit))["Lactic","Pr(>|t|)"]
+} 
+
+histVales <- hist(bvalues, 100,freq = FALSE,plot = FALSE)
+mean.bval = mean(bvalues)
+sd.bval <- sd(bvalues)
+
+
+plot(histVales$mids,histVales$density,col='blue',pch='*')
+lines(histVales$mids,dnorm(histVales$mids,mean.bval,sd.bval), type = "l",col="red")
+legend("topleft", title.col = "black",c("simulated","fitted normal" ),text.col =c("blue","red"),text.font = 1, cex = 1)
+
+pander(data.frame(mean.bval=mean.bval,sd.bval=sd.bval), caption = "Mean and sd of Lactic pvalues from simulation")
+```
+
+We see that the p-value is significantly affected at this level of additional noise in the predictor. 
+
+# 7.8 fat data analysis
+
+Use the fat data, fitting the model described in Section 4.2. 
+
+```{r}
+rm(list = ls())
+lm.fit <- lm(brozek ~ age + weight + height + neck + chest + abdom + hip + thigh + knee + ankle + biceps + forearm + wrist, data=fat)
+faraway::sumary(lm.fit)
+```
+
+### (a) Compute the condition numbers and variance inflation factors. Comment on the degree of collinearity observed in the data. 
+
+
+```{r}
+library(pander)
+x <- model.matrix(lm.fit)[,-1]
+e <- eigen(t(x) %*% x)
+pander(data.frame(ev=t(e$val)),caption = "eigenvalues")
+pander(data.frame(rcond =t(sqrt(e$val[1]/e$val))),caption="condition numbers")
+```
+
+We note a high condition number for the model matrix, and a number of the individual predictors have a large value of $\frac{\lambda_1}{\lambda_i}$ 
+
+```{r}
+pander(data.frame(VIF=t(vif(x))),caption="Variance Inflation Factors")
+
+```
+
+We see weight and abdom - and marginally chest - have VIF values indicating colinearity with other predictors. 
+
+### (b) Cases 39 and 42 are unusual. Refit the model without these two cases and recompute the collinearity diagnostics. Comment on the differences observed from the full data fit. 
+
+```{r}
+df.reduced <- fat[-c(39,42),]
+lm.fit.reduced <- lm(brozek ~ age + weight + height + neck + chest + abdom + hip + thigh + knee + ankle + biceps + forearm + wrist, data=df.reduced)
+faraway::sumary(lm.fit.reduced)
+
+```
+We see fewer significant predictors in the fit without the outliers. This makes intuitive sense - if the outlier(s) is(are) related to abnormal values of one of the predictors then it possible that predictor will have undue influence on the fit through the outliers.  Removing the outliers eliminates the influence and the significance. Neck and thigh are predictors that we'd consider for this effect, and indeed inspecting the data confirms that is the case for one (39) of the redacted data points. The other outlier (42) has a very small value for the height predictor. Although it is not significant in the model fit with the redacted data, the p-value is half that for the mode with the outliers. 
+
+### (c) Fit a model with brozek as the response and just age, weight and height as predictors. Compute the collinearity diagnostics and compare to the full data fit. 
+
+```{r}
+lm.fit.reduced <- lm(brozek ~ age + weight + height, data=df.reduced)
+library(pander)
+x <- model.matrix(lm.fit.reduced)[,-1]
+e <- eigen(t(x) %*% x)
+pander(data.frame(ev=t(e$val)),caption = "eigenvalues")
+pander(data.frame(rcond =t(sqrt(e$val[1]/e$val))),caption="condition numbers")
+pander(data.frame(VIF=t(vif(x))),caption="Variance Inflation Factors")
+```
+
+We see the colinearity diagnostics all indicate that there is no linear association among the predictors. 
+
+
+### (d) Compute a 95% prediction interval for brozek for the median values of age, weight and height. 
+
+```{r}
+x.reduced <- model.matrix(lm.fit.reduced)
+x0.reduced <- apply(x.reduced,2,median)
+pander(data.frame(median = t(x0.reduced[-(1)])), caption = "Median Value of Predictors")
+pi<- predict(lm.fit.reduced,new=data.frame(t(x0.reduced)),interval="prediction")
+pander(data.frame(pi), "95% Prediction Interval For Univariate Median of Predictors")
+pander(data.frame(pi.width=pi[3]-pi[2]), "95% Prediction Interval Width For Univariate Median of Predictors")
+```
+
+### (e) Compute a 95% prediction interval for brozek for age=40, weight=200 and height=73. How does the interval compare to the previous prediction? 
+
+```{r}
+x0.reduced <- data.frame(age=40,weight=200,height=73)
+pi<- predict(lm.fit.reduced,new=x0.reduced,interval="prediction")
+pander(data.frame(pi), "95% Prediction Interval For (age=40, weight=200 and height=73)")
+pander(data.frame(pi.width=pi[3]-pi[2]), "95% Prediction Interval Width For(age=40, weight=200 and height=73)")
+```
+
+
+This interval does not differ in width from the interval calculated from the median predictor values. 
+
+### (f) Compute a 95% prediction interval for brozek for age=40, weight=130 and height=73. Are the values of predictors unusual? Comment on how the interval compares to the previous two answers.
+
+```{r}
+x0.reduced <- data.frame(age=40,weight=130,height=73)
+pi<- predict(lm.fit.reduced,new=x0.reduced,interval="prediction")
+pander(data.frame(pi), "95% Prediction Interval For (age=40, weight=200 and height=73)")
+pander(data.frame(pi.width=pi[3]-pi[2]), "95% Prediction Interval Width For(age=40, weight=200 and height=73)")
+```
+
+The prediction interval with is larger for this example, and the predicted body fat is a very low value. Due to the weight, this data points is likely a high leverage points.  We can add it to the training set and see.
+
+```{r}
+x0.reduced <- apply(x.reduced,2,median)
+x0.reduced[1] <-40
+x0.reduced[2] <-130
+x0.reduced[3] <-73
+
+df.reduced.add <- rbind(df.reduced,x0.reduced)
+lm.fit.reduced.add <- lm(brozek ~ age + weight + height, data=df.reduced.add)
+plot(lm.fit.reduced.add,which = 5)
+
+```
+
+Indeed - the added point (251) is a high leverage point in the model with 
