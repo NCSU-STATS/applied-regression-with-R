@@ -1,0 +1,222 @@
+---
+title: "NCSU ST 503 HW 7"
+subtitle: "Probems 8.1, 8.6, 8.8   Faraway, Julian J. Linear Models with R, Second Edition Chapman & Hall / CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+fontsize: 12pt
+header-includes:
+   - \usepackage{bbm}
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(ggplot2)
+library(GGally)
+library(broom)
+library(printr)
+library(faraway)
+```
+
+# 8.1 NIST pipeline Data 
+
+Researchers at National Institutes of Standards and Technology (NIST) collected pipeline data on ultrasonic measurements of the depth of defects in the Alaska pipeline in the field. The depth of the defects were then remeasured in the laboratory. These measurements were performed in six different batches. It turns out that this batch effect is not significant and so can be ignored in the analysis that follows. The laboratory measurements are more accurate than the in-field measurements, but more time consuming and expensive. We want to develop a regression equation for correcting the in-field measurements. 
+
+### (a) Fit a regression model $Lab \sim Field$. Check for non-constant variance. 
+```{r}
+rm(list = ls())
+require(nlme)
+data(pipeline, package="faraway")
+lm.fit <- lm(Lab ~Field, data = pipeline)
+summary(lm.fit)
+plot(pipeline$Field,pipeline$Lab, col=as.factor(pipeline$Batch),main = TeX("$Lab \\sim Field$"),pch='*', cex=1.5)
+legend("topright",title="Batch",legend= unique(pipeline$Batch), fill=1:length(pipeline$Batch) )
+abline(coef(lm.fit),lty=5)
+
+plot(residuals(lm.fit) ~ Field, pipeline, main ="Residuals versus log(time) for simple linear model")
+
+```
+
+Based on the residual plot we see that we have evidence of non-constant variance. Variance increases with increasing predictor value.  
+
+### (b) We wish to use weights to account for the non-constant variance. 
+
+Here we split the range of Field into 12 groups of size nine (except for the last group which has only eight values). Within each group, we compute the variance of Lab as varlab and the mean of Field as meanfield. Supposing pipeline is the name of your data frame, the following R code will make the needed computations:
+
+```{r}
+i <- order(pipeline$Field) 
+npipe <- pipeline[i,] 
+ff <- gl(12,9)[-108] 
+meanfield <- unlist(lapply(split(npipe$Field,ff),mean))
+varlab <- unlist(lapply(split(npipe$Lab,ff),var))
+```
+
+Suppose we guess that the the variance in the response is linked to the predictor in the following way: $var(Lab) = a0 \;Field^{a1}$ Regress $log(varlab)$ on $log(meanfield)$ to estimate $a0$ and $a1$. (You might choose to remove the last point.) Use this to determine appropriate weights in a WLS fit of Lab on Field. Show the regression summary. 
+
+```{r}
+plot(log10(varlab) ,log10(meanfield))
+df<-data.frame(cbind(as.numeric(meanfield),as.numeric(varlab)))
+df <- df[-c(12),]
+lm.var.model <- lm(log(varlab) ~ log(meanfield) , data= df)
+summary(lm.var.model)
+```
+
+Since $var(Lab) = a0 \;Field^{a1}$ we have that $log(var(Lab)) = log(a0) + a1 \; log(Field)$ and from the model we fit our estimates of $a0$ and $a1$ are $10^{-0.3538}=0.4427922$  and $1.1244$.
+
+Now we calculate our weight vector with the variances obtained from our model.
+```{r}
+pipeline<- pipeline[with(pipeline, order(Field)), ]
+a0 <-10^summary(lm.var.model)$coefficients[1]
+a1 <-summary(lm.var.model)$coefficients[2]
+var.lab <-  a0 * pipeline$Field^a1 
+se.lab <- sqrt(var.lab)
+```
+
+Let plot the data with some error bars from the estimated variances just to make sure everything looks reasonable. 
+
+```{r}
+plot(pipeline$Field,pipeline$Lab, pch='*', ylim = c(0,100), main = "Field versus Lab with error bars")
+arrows(pipeline$Field, pipeline$Lab-se.lab,pipeline$Field, pipeline$Lab+se.lab, length=0.05, angle=90, code=3)
+```
+
+```{r}
+pipeline$lab.var <- var.lab 
+wlm.fit <- gls( Lab ~ Field, data=pipeline, weights = ~ var.lab)
+summary(wlm.fit)
+
+plot(pipeline$Field,pipeline$Lab, main = TeX("$Lab \\sim Field$ weighted regression with var model as weight"))
+abline(coef(wlm.fit),lty=5)
+
+plot(residuals(wlm.fit) ~ Field,pipeline, main ="Residuals versus Field for weighted regression ")
+```
+
+
+### (c) An alternative to weighting is transformation. Find transformations on Lab and/or Field so that in the transformed scale the relationship is approximately linear with constant variance. You may restrict your choice of transformation to square root, log and inverse.
+
+```{r}
+lm.fit <- lm((Lab)^0.5 ~log(Field), data = pipeline)
+summary(lm.fit)
+plot(log(pipeline$Field),pipeline$Lab^0.5, col=as.factor(pipeline$Batch),main = TeX("$Lab \\sim Field$"),pch='*', cex=1.5)
+legend("topright",title="Batch",legend= unique(pipeline$Batch), fill=1:length(pipeline$Batch) )
+abline(coef(lm.fit),lty=5)
+plot(residuals(lm.fit) ~ Field, pipeline, main ="Residuals versus log(time) for simple linear model")
+```
+The RSE of this model is lower than the weighted model.  I'm not sure I'd use that alone as a criteria for selecting a model.  If we had a physical reason for the variance model we used - then we might opt to stick with the weighted regression.  
+
+# 8.6 Analysis of cheddar data 
+
+Using the cheddar data, fit a linear model with taste as the response and the other three variables as predictors. 
+
+```{r}
+rm(list = ls())
+data(cheddar, package="faraway")
+lm.fit <- lm(taste ~ ., data=cheddar)
+summary(lm.fit)
+```
+
+### (a) Suppose that the observations were taken in time order. Create a time variable. Plot the residuals of the model against time and comment on what can be seen. 
+
+```{r}
+cheddar$time <-1:nrow(cheddar)
+
+plot(residuals(lm.fit) ~ time, cheddar, main ="Residuals versus time for simple linear model")
+```
+
+Fitting a linear model we can get an estimate of the correlation.
+
+```{r}
+df<-data.frame(cbind(residuals(lm.fit),cheddar$time))
+lm.resid.fit <- lm(X1 ~ X2, data = df)
+summary(lm.resid.fit)
+```
+
+Here we calculate the lag(1) correlation on the residuals.   
+
+```{r}
+u<- residuals(lm.fit)[-length(residuals(lm.fit))]
+v <- residuals(lm.fit)[-1]
+cor.residuals <- cor(u,v)
+pander(data.frame(cor.residuals=cor.residuals), caption = "lag(1) correlation on residuals")
+```
+
+### (b) Fit a GLS model with same form as above but now allow for an AR(1) correlation among the errors. Is there evidence of such a correlation? 
+
+```{r}
+glm.fit <- gls( taste ~ Acetic+H2S + Lactic,  correlation=corAR1(form=~time),  data=na.omit(cheddar))
+
+summary(glm.fit)
+```
+
+### (c) Fit a LS model but with time now as an additional predictor. Investigate the significance of time in the model. 
+
+```{r}
+lm.fit <- lm(taste ~ ., data=cheddar)
+summary(lm.fit)
+```
+
+Time is significant in this model at a level of $\alpha=0.05$.  The coefficient tells us that when all other variables are held constant an increasing time value results in a decreasing value of taste.  We see the value of the coefficient is close to the model we fit of residuals of the original model versus time $\sim -0.5$.
+
+### (d) The last two models have both allowed for an effect of time. Explain how they do this differently.
+
+Obviously the LS model accounts for time by explicitly including it as a predictor. The GLS model we account for time through the error structure. We construct an estimate of the variance covariance matrix of the regression equation $\Sigma= S^t S$ from an AR(1) model of the residuals. 
+
+
+# 8.8 Gammaray analysis
+The gammaray dataset shows the x-ray decay light curve of a gamma ray burst. Build a model to predict the flux as a function time that uses appropriate weights.
+
+First we plot the data 
+
+```{r}
+rm(list = ls())
+require(nlme)
+data(gammaray, package="faraway")
+plot(gammaray$time,gammaray$flux, main="time versus flux")
+plot(gammaray$time,gammaray$error, main="time versus measurement error")
+
+```
+
+
+We see a hyperbolic relationship btween the predictor and the response so We fit a weighted regression $flux \sim \frac{1}{time}$ with weights equal to the error
+
+
+```{r}
+
+wlm.fit <- gls(flux ~ I(1/time), data=gammaray, weights = ~ 1/error)
+summary(wlm.fit)
+
+plot(1/(gammaray$time),(gammaray$flux), main = TeX("$flux \\sim \\frac{1}{time}$"))
+abline(coef(wlm.fit),lty=5)
+
+plot(residuals(wlm.fit) ~ I(1/time), gammaray, main ="Residuals versus 1/time for weighted regression")
+```
+
+We try a trasformation - for reference, and for fun.  We Chose this model after some experimenting
+
+$$(flux)^{\frac{1}{8}} \sim log(time)$$ 
+
+```{r}
+lm.fit <- lm((flux)^.125 ~log(time), data = gammaray)
+summary(lm.fit)
+plot(log(gammaray$time),(gammaray$flux)^.125, main = TeX("$(flux)^{\\frac{1}{8}} \\sim log(time)$"))
+abline(coef(lm.fit),lty=5)
+
+plot(residuals(lm.fit) ~ log(time), gammaray, main ="Residuals versus log(time) for simple linear model")
+```
+
+
+
+

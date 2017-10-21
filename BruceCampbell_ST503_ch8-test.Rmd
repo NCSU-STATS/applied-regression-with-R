@@ -1,0 +1,197 @@
+---
+title: "NCSU ST 503 Discussion 8"
+subtitle: "Probem  8.7 Faraway, Julian J. Linear Models with R CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+# Gammaray analysis
+The gammaray dataset shows the x-ray decay light curve of a gamma ray burst. Build a model to predict the flux as a function time that uses appropriate weights.
+
+First we plot the data 
+```{r}
+rm(list = ls())
+require(nlme)
+data(gammaray, package="faraway")
+plot(gammaray$time,gammaray$flux, main="time versus flux")
+```
+
+Based on the plot we look at a linear mode of flux versus log time.  Here we plot the residuals versus log time. 
+
+```{r}
+lm.fit <- lm(flux ~log(time), data = gammaray)
+plot(log(gammaray$time),gammaray$flux, main = "log time ")
+abline(coef(lm.fit),lty=5)
+plot(residuals(lm.fit) ~ log(time), gammaray)
+```
+
+We see serial correlation and a non linear relationship in the residuals.  
+
+```{r}
+u<- residuals(lm.fit)[-length(residuals(lm.fit))]
+v <- residuals(lm.fit)[-1]
+cor.residuals <- cor(v,u)
+pander(data.frame(cor.residuals=cor.residuals), caption = "residual correlation")
+```
+The table above contains the serial correlation between neighboring residuals.  Since the flux measurements are taken sequentially in time we are not surprised to find significant serial correlation. Next we try to fit a Generalized Leat Squares (GLS) model $flux~log(time)$ with an errror model $\epsilon_i = \phi \epsilon_{i-1} +\delta_i$ where $\delta_i \sim_{iid} N(o,\tau^2)$
+
+We note that we had to remove a few entries from that data because we encountered the following R error due to duplicate time values.  
+```covariate must have unique values within groups for "corAR1" objects```
+
+If there were more predicors in the model we'd investigate whether the multiple values were due to one of the other predictors and if so we'd consider adding that preditor as a conditional element of the correlation structure. 
+
+Sadly even after removing the duplicates we were not able to fit a good model the gls function. 
+```{r}
+df<- gammaray
+df = df[!duplicated(df$time),]
+
+glm.fit <- gls(flux ~(time),  correlation=corAR1(form=~(time)),  data=na.omit(df))
+glm.fit<-  gls(flux ~log(time) , correlation=corAR1(form=~1),data=na.omit(df) )
+summary(glm.fit)
+plot( log(df$time),residuals(glm.fit),col='red', pch='*')
+plot(residuals(lm.fit) ~ log(time), gammaray)
+points( log(df$time),residuals(glm.fit),col='red', pch='*')
+intervals(glm.fit,which="var-cov")
+```
+
+
+Since the experimenter gave us the errors for each measurement we now try to use that information in a weighted linear model.  Here we plot the measurements with the errors in the model space 
+
+
+```{r}
+plot(log(gammaray$time),(gammaray$flux)^.125, main = TeX("$(flux)^{\\frac{1}{8}} \\sim log(time)$"))
+arrows(log(gammaray$time), (gammaray$flux)^.125-(gammaray$error)^.0625, log(gammaray$time), (gammaray$flux)^.125+(gammaray$error)^.0625, length=0.05, angle=90, code=3)
+
+
+plot((gammaray$flux)^.125,(gammaray$error)^.125)
+
+```
+
+
+For fun we fit a weighted least squares model $\sqrt{flux} \sim log(time)$ with an error variance fit to $sd(\epsilon_i)= \gamma_0 + log(time)^{\gamma_1}$
+
+```{r}
+wlm.fit <- gls(sqrt(flux) ~log(time), data=gammaray, weight = varConstPower(1, form = ~ log(time)))
+summary(wlm.fit)
+resid.wlm <-residuals(wlm.fit)
+log.time <- log(gammaray$time)
+plot(residuals(lm.fit) ~ log(time), gammaray)
+points( log(gammaray$time),residuals(wlm.fit),col='red', pch='*')
+```
+
+
+
+Here we fit a robust regression 
+
+```{r}
+library(MASS)
+rlm.fit <- rlm(flux ~log(time), data=gammaray)
+resid.rlm <-residuals(wlm.fit)
+log.time <- log(gammaray$time)
+plot(residuals(rlm.fit) ~ log(time), gammaray)
+points( log(gammaray$time),residuals(wlm.fit),col='red', pch='*')
+```
+
+
+
+
+Before we get started with the robust regression we investigate all of the diagnostics from chapter 6. 
+
+### Check normality of errors
+
+```{r}
+qqnorm(residuals(lm.fit),ylab="Residuals",main="Q-Q Plot of Residuals")
+qqline(residuals(lm.fit))
+
+qqnorm(scale( residuals(lm.fit),center = TRUE, scale = TRUE),ylab="Residuals",main="Q-Q Plot of Standardized Residuals")
+qqline(scale( residuals(lm.fit),center = TRUE, scale = TRUE) )
+```
+
+### Check for high leverage points
+
+```{r}
+df<- gammaray[ , -which(names(gammaray) %in% c("error"))]
+numPredictors <- ( ncol(df)-1)
+hatv <- hatvalues(lm.fit)
+lev.cut <- (numPredictors+1) *2 * 1/ nrow(df)
+high.leverage <- df[hatv > lev.cut,]
+pander(high.leverage, caption = "High Leverage Data Elements")
+```
+
+We've used the rule of thumb that points with a leverage greater than $\frac{2 p }{n}$ should be looked at.
+
+### Check for outliers. 
+
+```{r}
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-numPredictors+1
+n<-nrow(df)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+
+outlier.index <- abs(studentized.residuals) > abs(t.val.alpha)
+
+outliers <- df[outlier.index==TRUE,]
+
+if(nrow(outliers)>=1)
+{
+  pander(outliers, caption = "outliers")
+}
+
+```
+
+Here we look for studentized residuals that fall outside the interval given by the Bonferroni corrected t-values.
+
+### Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+### Check for structure in the model. 
+
+Plot residuals versus predictors
+
+```{r}
+
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  
+  plot(df[,predictor],residuals(lm.fit),xlab=,ylab="Residuals",main = paste(predictor, " versus residuals", sep = ''))
+
+}
+
+```
+
+
+

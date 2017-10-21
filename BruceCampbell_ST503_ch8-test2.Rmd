@@ -1,0 +1,66 @@
+---
+title: "NCSU ST 503 Discussion 8"
+subtitle: "Probem  8.7 Faraway, Julian J. Linear Models with R CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+# 8.8 Gammaray analysis
+The gammaray dataset shows the x-ray decay light curve of a gamma ray burst. Build a model to predict the flux as a function time that uses appropriate weights.
+
+First we plot the data 
+
+```{r}
+rm(list = ls())
+require(nlme)
+data(gammaray, package="faraway")
+plot(gammaray$time,gammaray$flux, main="time versus flux")
+plot(gammaray$time,gammaray$error, main="time versus measurement error")
+
+```
+
+
+Now we transform the data to be more amenable to linear modelling.  We choose $(flux)^{\frac{1}{8}} \sim log(time)$ as the basis for our modelling efforts. 
+
+We fit a simple linear model here so we have something to compare to when we perform weighted regression;
+
+```{r}
+lm.fit <- lm((flux)^.125 ~log(time), data = gammaray)
+summary(lm.fit)
+plot(log(gammaray$time),(gammaray$flux)^.125, main = TeX("$(flux)^{\\frac{1}{8}} \\sim log(time)$"))
+abline(coef(lm.fit),lty=5)
+
+plot(residuals(lm.fit) ~ log(time), gammaray, main ="Residuals versus log(time) for simple linear model")
+```
+
+```{r}
+wlm.fit <- gls((flux)^.125 ~log(time), data=gammaray, weights = ~(error)^.125)
+summary(wlm.fit)
+
+plot(log(gammaray$time),(gammaray$flux)^.125, main = TeX("$(flux)^{\\frac{1}{8}} \\sim log(time)$"))
+abline(coef(wlm.fit),lty=5)
+
+plot(residuals(wlm.fit) ~ log(time), gammaray, main ="Residuals versus log(time) for weighted regression")
+```
+
+

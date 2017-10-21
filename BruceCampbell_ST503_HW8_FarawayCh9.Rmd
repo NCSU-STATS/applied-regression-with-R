@@ -1,0 +1,41 @@
+---
+title: "NCSU ST 503 HW 6"
+subtitle: "Probems 8.5, 9.4, 9.5 9.6  Faraway, Julian J. Linear Models with R, Second Edition Chapman & Hall / CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+fontsize: 12pt
+header-includes:
+   - \usepackage{bbm}
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(ggplot2)
+library(GGally)
+library(broom)
+library(printr)
+library(faraway)
+```
+
+# 8.5
+
+# 9.4
+
+# 9.5
+
+# 9.6

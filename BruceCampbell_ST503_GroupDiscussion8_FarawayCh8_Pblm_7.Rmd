@@ -1,0 +1,109 @@
+---
+title: "NCSU ST 503 Discussion 8"
+subtitle: "Probem  8.7 Faraway, Julian J. Linear Models with R CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+# 8.7 crawl data analysis
+
+The crawl dataset contains data on a study looking at the age when babies learn to crawl as a function of ambient temperatures. There is additional information about the number of babies studied each month and the variation in the response. Make an appropriate choice of weights to investigate the relationship between crawling age and temperature.
+
+```{r}
+rm(list = ls())
+require(nlme)
+data(crawl, package="faraway")
+```
+
+First we plot the dat along with the error and count information
+
+```{r}
+plot(crawl$temperature,crawl$crawling, ylim = c(0,50), main = "temperature versus crawling with error bars and counts ")
+arrows(crawl$temperature, crawl$crawling-crawl$SD,crawl$temperature, crawl$crawling+crawl$SD, length=0.05, angle=90, code=3)
+ text(crawl$temperature, crawl$crawling, labels=crawl$n, cex= .8, pos=3, col='red')
+```
+
+We fit a weighted least squares model with  ```lm``` using weights $w_i = \frac{n_i}{SD^2_i}$.  
+
+ 
+```{r}
+wts <- crawl$n/crawl$SD^2
+
+lm.fit <- lm( crawling ~ temperature, data=crawl,weights = wts )
+summary(lm.fit)
+```
+
+We fit a weighted least squares model with gls using weights $w_i = \frac{n_i}{SD^2_i}$.  
+
+```{r}
+wlm.fit <- gls( crawling ~ temperature, data=crawl, weights = ~ SD^2/n)
+summary(wlm.fit)
+
+plot(crawl$temperature,crawl$crawling, main = TeX("$crawling \\sim temperature$ weighted regression with count as weight"))
+abline(coef(wlm.fit),lty=5)
+
+plot(residuals(wlm.fit,,type="normalized") ~ temperature,crawl, main ="Normalized residuals versus temperature")
+```
+
+This data may be amenable to the lack of fit analysis discussed in the text.  We don't have the original $y_ii$ in the formaula for 
+
+$$SS_{pe} = \sum_j \sum_i (y_{ji} - \bar{y})^2$$
+
+But we know n is the sum of the counts, that the mean response for each temperature as the crawl variable, and that $SE_j= \frac{1}{n_j} \sum_i (y_{ii} - \bar{y_j})^2$
+
+
+So 
+
+$$\hat{\sigma}^2 = \frac{SS_{pe}}{(\sum_j n_i) - j} =\frac{1}{(\sum_j n_i) - j}   \;\; \sum_j \sum_i (y_{ji} - \bar{y})^2 =\frac{1}{(\sum_j n_i) - j} \;\; \sum_j n_j SE_j$$
+Calculating this for our data set we have 
+
+```{r}
+library(pracma) # Well used R library for math routines
+
+SSpe<- pracma::dot(crawl$n, crawl$SD)
+
+total <- sum(crawl$n)
+
+groups <- nrow(crawl)
+
+sigma.sq.estimated <- SSpe/ (total-groups)
+
+pander(data.frame(se=sqrt(sigma.sq.estimated)), caption="estimated SD from the repeated predictor values")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

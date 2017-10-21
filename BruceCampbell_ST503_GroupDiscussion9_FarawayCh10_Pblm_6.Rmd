@@ -1,0 +1,85 @@
+---
+title: "NCSU ST 503 Discussion 8"
+subtitle: "Probem  10.6 Faraway, Julian J. Linear Models with R CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+# 10.6 Model Selection with the hipcenter data.
+
+Use the seatpos data with hipcenter as the response. 
+
+### (a) Fit a model with all eight predictors.  Comment on the effect of leg length on the response. 
+
+```{r}
+rm(list = ls())
+data(seatpos, package="faraway")
+df <-seatpos 
+numPredictors <- ( ncol(df)-1)
+lm.fit <- lm(hipcenter ~ ., data=df)
+summary(lm.fit)
+```
+
+We note that leg length is significant at a level of $\alpha=0.018$ and it has a negative association with the response.   
+
+(b) Compute a 95% prediction interval for the mean value of the predictors. 
+
+```{r}
+x.model.matrix <- model.matrix(lm.fit)
+x0.mean <- apply(x.model.matrix,2,mean)
+pi<-predict(lm.fit,new=data.frame(t(x0.mean)),interval="prediction")
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]))
+```
+
+(c) Use AIC to select a model. Now interpret the effect of leg length and compute the prediction interval. Compare the conclusions from the two models.
+ 
+```{r}
+library(leaps) 
+regsubsets.out <- regsubsets(hipcenter ~ .,data=seatpos,method = "exhaustive",nvmax=8) 
+rs <- summary(regsubsets.out) 
+rs$which
+AIC <- 50*log(rs$rss/50) + (2:9)*2
+plot(AIC ~ I(1:8), ylab="AIC", xlab="Number of Predictors")
+
+plot(regsubsets.out, scale = "adjr2", main = "Adjusted R^2")
+```
+
+We see that $hipcenter \sim + age + ht + Leg$ is the model with the lowest AIC.  We also plot the Adjusted $R^2$ of the models.
+
+```{r}
+lm.fit.subset <- lm(hipcenter ~ Age+Ht+Leg, data=df)
+summary(lm.fit.subset)
+```
+Leg now has a p-value of $0.1099$
+
+```{r}
+
+x.model.matrix <- model.matrix(lm.fit.subset)
+x0.mean <- apply(x.model.matrix,2,mean)
+pi<-predict(lm.fit.subset,new=data.frame(t(x0.mean)),interval="prediction")
+pi
+pander(data.frame(pi.width=pi[3]-pi[2]))
+```
+As expected our prediction interval has decresed in width. Ht is now significant at $0.07$ which is a dramatic change. We presume this is due to linear association among the predictors. 
+
