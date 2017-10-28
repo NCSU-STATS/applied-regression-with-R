@@ -40,7 +40,7 @@ lm.fit <- lm(hipcenter ~ ., data=df)
 summary(lm.fit)
 ```
 
-We note that leg length is significant at a level of $\alpha=0.018$ and it has a negative association with the response.   
+We note that leg length is significant at a level of $\alpha=0.182$ and it has a negative association with the response.   
 
 (b) Compute a 95% prediction interval for the mean value of the predictors. 
 
@@ -73,13 +73,23 @@ summary(lm.fit.subset)
 ```
 Leg now has a p-value of $0.1099$
 
-```{r}
+Let's calculate the condition number of the model matrix.
 
+```{r}
+x <- model.matrix(lm.fit.subset)[,-1]
+e <- eigen(t(x) %*% x)
+pander(data.frame(ev=t(e$val)),caption = "eigenvalues")
+pander(data.frame(rcond =t(sqrt(e$val[1]/e$val))),caption="condition numbers")
+```
+
+
+```{r}
 x.model.matrix <- model.matrix(lm.fit.subset)
+
 x0.mean <- apply(x.model.matrix,2,mean)
 pi<-predict(lm.fit.subset,new=data.frame(t(x0.mean)),interval="prediction")
 pi
 pander(data.frame(pi.width=pi[3]-pi[2]))
 ```
-As expected our prediction interval has decresed in width. Ht is now significant at $0.07$ which is a dramatic change. We presume this is due to linear association among the predictors. 
+As expected our prediction interval has decresed in width. Ht is now significant at $0.07$ which is a dramatic change. We presume this is due to linear association among the predictors. We note that the predictions of the two models are similar.
 

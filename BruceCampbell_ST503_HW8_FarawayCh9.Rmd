@@ -32,10 +32,275 @@ library(printr)
 library(faraway)
 ```
 
-# 8.5
+## 8.5 Comparing model fitting methods with the stackloss data 
 
-# 9.4
+Using the stackloss data, fit a model with stack.loss as the response and the other three variables as predictors using the following methods: 
 
-# 9.5
+### (a) Least squares
 
-# 9.6
+```{r, echo = FALSE}
+data(stackloss, package="faraway")
+lm.fit <- lm(stack.loss ~ . , data=stackloss)
+summary(lm.fit)
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+abline(h=0)
+```
+
+we see there may be an association with the variance of the residuals and the value of the response. 
+
+### (b) Least absolute deviations 
+
+
+We use the quantreg::rq method for the $L^1$ regression. Its worth reading the details of the algorithmic methods for computing the fit here.  Also worthy of note is that ```quantrg::rq``` provides a lasso option for sparse regression. 
+
+```{r}
+require(quantreg)
+lm.ell1 <- rq(stack.loss ~ ., data= stackloss)
+summary(lm.ell1)
+```
+
+### (c) Huber method 
+
+We use the MASS::rlm() function to fit the model with the Huber loss. 
+
+```{r}
+require(MASS)
+lm.mestimator <- rlm(stack.loss ~ . ,data=stackloss)
+summary(lm.mestimator)
+```
+
+```{r}
+mest.weights <- lm.mestimator$w
+names(mest.weights) <- row.names(stackloss)
+head(sort(mest.weights),10)
+```
+
+We see that ```21 4 and 3``` have weights less than 1.  We will investigate these points in our diagnostics later.
+
+
+### (d) Least trimmed squares Compare the results. 
+
+```{r}
+least.trimmed..sq.fit <- ltsreg(stack.loss ~ . ,data=stackloss)
+coef(least.trimmed..sq.fit)
+```
+
+### Now use diagnostic methods to detect any outliers or influential points. Remove these points and then use least squares. Compare the results.
+
+#### Check Leverage 
+
+```{r}
+df <-stackloss 
+numPredictors <- ( ncol(df)-1)
+hatv <- hatvalues(lm.fit)
+lev.cut <- (numPredictors+1) *2 * 1/ nrow(df)
+high.leverage <- df[hatv > lev.cut,]
+pander(high.leverage, caption = "High Leverage Data Elements")
+```
+
+We've used the rule of thumb that points with a leverage greater than $\frac{2 p }{n}$ should be looked at.
+
+#### Check for outliers. 
+
+```{r}
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-numPredictors+1
+n<-nrow(df)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+
+outlier.index <- abs(studentized.residuals) > abs(t.val.alpha)
+
+outliers <- df[outlier.index==TRUE,]
+
+if(nrow(outliers)>=1)
+{
+  pander(outliers, caption = "outliers")
+}
+
+```
+
+Here we look for studentized residuals that fall outside the interval given by the Bonferroni corrected t-values.
+
+#### Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+#### Check for structure in the model. 
+
+##### Plot residuals versus predictors
+
+```{r}
+
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  
+  plot(df[,predictor],residuals(lm.fit),xlab=,ylab="Residuals",main = paste(predictor, " versus residuals", sep = ''))
+
+}
+
+```
+
+#### Perform partial regression
+
+```{r}
+predictors <-names(lm.fit$coefficients)
+predictors <- predictors[2:length(predictors)]
+
+lm.formula <- formula(lm.fit)
+response <- lm.formula[[2]] 
+
+for(i in 1:length(predictors))
+{
+  predictor <- predictors[i]
+  others <- predictors[  which(predictors != predictor) ]
+  d.formula <-paste(response, " ~ ",sep='')
+  m.formula <-paste(predictor, " ~ ",sep='')
+  
+  for(j in 1:(length(others)-1))
+  { 
+    d.formula <-paste(d.formula, others[j]," + ", sep='')
+    m.formula <-paste(m.formula, others[j]," + ", sep='')
+  }
+  d.formula <-paste(d.formula, others[length(others)], sep='')
+  d.formula <-formula(d.formula)
+
+  m.formula <-paste(m.formula, others[length(others)], sep='')
+  m.formula <-formula(m.formula)
+
+  d <- residuals(lm(d.formula,df))
+  
+  m <- residuals(lm(m.formula,df))
+  
+  plot(m,d,xlab=paste(predictor, " residuals",sep=''),ylab="response residuals",main = paste("Partial regression plot for " , predictor,sep=''))
+
+}
+```
+
+
+## 9.4 Using transformations in model of pressure data
+
+Use the pressure data to fit a model with pressure as the response and temperature as the predictor using transformations to obtain a good fit.
+
+```{r}
+rm(list = ls())
+data(pressure, package="faraway")
+lm.fit <- lm(pressure ~ . , data=pressure)
+summary(lm.fit)
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals", main = "fitted versus residuals for pressure ~ temperature")
+abline(h=0)
+plot(pressure$temperature,log(pressure$pressure), main = "temperature versus log(pressure) ")
+```
+
+Based on the plots above we look into fitting a series of models of the form $log(pressure) \sim \sum b_i temperature^i$
+We note this data looks highly regular, and appears to originate from a physical process. There's obviously some functional relationship between these variables.  Knowing this may help us in our modelling. $PV=nRT$ is a good place to start!  We also note that there are only 19 observations in this data set so we should not fit too many models or add too many predictors in looking for a good fit. 
+
+```{r}
+lm.fit.polynomial <- lm(log(pressure) ~  temperature + I(temperature^2), data=pressure)
+summary(lm.fit.polynomial)
+plot(fitted(lm.fit.polynomial),residuals(lm.fit.polynomial),xlab="Fitted",ylab="Residuals")
+abline(h=0)
+```
+
+```{r}
+lm.fit.polynomial <- lm(log(pressure) ~  temperature + I(temperature^2)+ I(temperature^3), data=pressure)
+summary(lm.fit.polynomial)
+plot(fitted(lm.fit.polynomial),residuals(lm.fit.polynomial),xlab="Fitted",ylab="Residuals")
+abline(h=0)
+```
+
+## 9.5 Use transformations to find a good model for volume in terms of girth and height using the trees data.
+
+```{r}
+rm(list = ls())
+data(trees, package="faraway")
+lm.fit <- lm(sqrt(Volume)  ~ Girth + Height  , data=trees)
+summary(lm.fit)
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals", main = "fitted versus residuals for pressure ~ temperature")
+abline(h=0)
+plot(trees$Girth,trees$Volume)
+plot(trees$Height,trees$Volume)
+```
+
+We chose a sqrt transformation of the response after seeing a quadratic relationship among fitted versus residuals.  Now we use the Box-Cox method to validate our choice.
+
+```{r}
+lm.fit.notransform <- lm(Volume  ~ Girth + Height  , data=trees)
+boxcox(lm.fit.notransform, plotit=T)
+boxcox(lm.fit.notransform, plotit=T, lambda=seq(0.2,.5,by=0.01))
+```
+
+We see the Box-Cox suggests a lambda of $\sim 0.3$
+
+```{r}
+lm.fit <- lm(Volume^0.3  ~ Girth + Height  , data=trees)
+summary(lm.fit)
+```
+Indeed we do have a better fit as evidenced by the lower RSE.
+
+## 9.6 Response surface for odor data 
+
+### (a) Fit a second order response surface for the odor response using the other three variables as predictors. How many parameters does this model use and how many degrees of freedom are left? 
+
+There should be 3^2 +1 parameters in this model.   
+
+```{r}
+rm(list = ls())
+data(odor, package="faraway");df<-odor
+lm.fit <- lm(odor ~ polym(temp,gas,pack,degree=2),odor) 
+summary(lm.fit)
+```
+As expected there are 9 predictors.  There are VERY few degrees of freedom left.  Any model we produce with this many predictors and so few degrees of freedom would be dubious.
+
+
+```{r}
+#odor.max <- sapply(df, min)
+#odor.min <- sapply(df, max)
+#temp.grid <- seq(-1,1 , len=10)
+#gas.grid <- seq(-1,1 , len=10)
+#pack.grid <- seq(-1,1 , len=10)
+#temp.gas.grid <- expand.grid(temp=temp.grid, gas=gas.grid, pack = pack.grid)
+#pv <- predict(lm.fit, temp.gas.grid) 
+#persp(pop15r, ddpir, matrix(pv, 10, 10), theta=45, xlab="Pop under 15", ylab="Growth", zlab = "Savings rate", ticktype="detailed", shade = 0.25)
+```
+
+### (b) Fit a model for the same response but now excluding any interaction terms but including linear and quadratic terms in all three predictors. Compare this model to the previous one. Is this simplification justified? 
+
+```{r}
+lm.fit.nointeractions <- lm(odor ~ temp+ gas+ pack + I(temp^2) + I(gas^2) + I(pack^2) ,data=odor)
+summary(lm.fit.nointeractions)
+```
+Based on the adjusted $R^2$ the simplification is justified. 
+                            
+### (c) Use the previous model to determine the values of the predictors which result in the minimum predicted odor.
+
+```{r}
+yhat <- lm.fit.nointeractions$fitted.values
+min.fit = min(yhat)
+max.fit = max(yhat)
+df <- cbind(df, yhat)
+df <- as.data.frame(df)
+index <- which.min(df$yhat) #very usefull command
+row.in.df <- df[index,]
+pander(data.frame(row.in.df), caption = "Predictor values resulting in minimum fitted value")
+```
+
+
+
+
+
+
+
+

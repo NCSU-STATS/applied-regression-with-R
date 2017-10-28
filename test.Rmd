@@ -1,0 +1,260 @@
+---
+title: "test"
+author: "Bruce Campbell"
+date: "October 27, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+library(pander)
+```
+
+## 10.1 1 (a - c) Subset Selection with prostate data 
+
+For 10.1 (a): Please use Backward Elimination in 3 ways: (i) a 0.05 p-value criterion as the stopping rule, (ii) using AIC as the stopping rule, and (iii) using BIC as the stopping rule. 
+
+For 10.1 (b-c): You should be comparing all possible subsets.
+
+Use the prostate data with lpsa as the response and the other variables as predictors. Implement the following variable selection methods to determine the "best" model: 
+
+
+### (a) Backward elimination 
+
+It was not clear to be that it is possible to use regsubsets with the backward method to perform Backward Elimination based on p-value. 
+
+```{r}
+rm(list = ls())
+data(prostate, package="faraway");
+df <- prostate
+n <-nrow(df)
+
+lm.fit <- lm(lpsa ~ ., data=prostate)
+summary(lm.fit)
+
+lm.subset1 <- update(lm.fit,. ~ . - gleason)
+summary(lm.subset1)
+
+lm.subset1 <- update(lm.subset1,. ~ . - lcp)
+summary(lm.subset1)
+
+lm.subset1 <- update(lm.subset1,. ~ . - pgg45)
+summary(lm.subset1)
+
+lm.subset1 <- update(lm.subset1,. ~ . - age)
+summary(lm.subset1)
+
+lm.subset1 <- update(lm.subset1,. ~ . - lbph)
+summary(lm.subset1)
+
+
+```
+
+We can use regsubsets with the backwards method to find the best model by the BIC criteria.  The plot method will show us the top models.  Interestingly there does not appear a way to use the plot with the AIC. 
+```{r}
+library(leaps) 
+regsubsets.out <- regsubsets(lpsa ~ .,data=prostate,method = "backward",nvmax=10) 
+rs <- summary(regsubsets.out)
+rs$which
+plot(regsubsets.out, scale = "bic", main = "BIC")
+```
+
+There does not appear to be a scale="aci" option for the regsubsets plot. This is interesting to note.  
+We plot the AIC for the models here and compare to the exhaustive search for reference. 
+
+```{r}
+regsubsets.out <- regsubsets(lpsa ~ .,data=prostate,method = "backward",nvmax=10) 
+rs <- summary(regsubsets.out) 
+rs$which
+AIC <- n*log(rs$rss/n) + (2:9)*2
+plot(AIC ~ I(1:8), ylab="AIC", xlab="Number of Predictors")
+```
+
+
+### (b) AIC 
+
+```{r}
+regsubsets.out <- regsubsets(lpsa ~ .,data=prostate,method = "exhaustive",nvmax=10) 
+rs <- summary(regsubsets.out) 
+rs$which
+AIC <- n*log(rs$rss/n) + (2:9)*2
+plot(AIC ~ I(1:8), ylab="AIC", xlab="Number of Predictors")
+plot(regsubsets.out, scale = "bic")
+```
+
+### (c) Adjusted $R^2$
+ 
+```{r}
+regsubsets.out <- regsubsets(lpsa ~ .,data=prostate,method = "exhaustive",nvmax=8) 
+rs <- summary(regsubsets.out) 
+plot(regsubsets.out, scale = "adjr2", main = "Adjusted R^2")
+```
+
+
+
+## 10.4 Simplifying trees model
+
+Using the trees data, fit a model with log(Volume) as the response and a second-order polynomial (including the interaction term) in Girth and Height. Determine whether the model may be reasonably simplified.
+
+
+```{r}
+rm(list = ls())
+data(trees, package="faraway")
+df <- trees
+n <-nrow(df)
+lm.fit <- lm(log(Volume)  ~ polym(Girth,Height,degree=2) , data=trees)
+summary(lm.fit)
+```
+
+
+Now we run subset selection.  We'll use an ehaustive method since there are not too many predictors. And we'll use the Mallow $C_p$ as our criteria. 
+
+```{r}
+lm.fit$coefficients
+regsubsets.out <- regsubsets(log(Volume)  ~ polym(Girth,Height,degree=2),data=trees,method = "exhaustive",nvmax=8) 
+rs <- summary(regsubsets.out)
+rs$which
+plot(regsubsets.out, scale = "Cp", main = "Mallow C_p")
+AIC <- n*log(rs$rss/n) + (2:5)*2
+plot(AIC ~ I(1:5), ylab="AIC", xlab="Number of Predictors")
+```
+
+The AIC citerion indicates the best model is the full model with all the polynomial terms, while the Mallow Cp indicates the best model is a reduced one with the first three terms of the ploynomial expansion : 
+
+$log(Volume) \sim polym(Girth, Height, degree = 2)1.0 + polym(Girth, Height, degree = 2)2.0 + polym(Girth, Height, degree = 2)0.1$ 
+
+$log(Volume) \sim Girth + Girth^2, +Height$ 
+
+
+## 10.5  Model reduction in stackloss data 
+
+### Fit a linear model to the stackloss data with stack.loss as the predictor and the other variables as predictors. 
+
+```{r}
+data(stackloss, package="faraway")
+lm.fit <- lm(stack.loss ~ . , data=stackloss);
+df <- stackloss
+n <-nrow(df)
+summary(lm.fit)
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+abline(h=0)
+```
+
+### Simplify the model if possible. 
+
+Now we run subset selection.  We'll use an ehaustive method since there are not too many predictors. And we'll use the Mallow $C_p$ as our criteria. 
+
+```{r}
+regsubsets.out <- regsubsets(stack.loss ~ .,data=df,method = "exhaustive",nvmax=8) 
+rs <- summary(regsubsets.out)
+rs$which
+plot(regsubsets.out, scale = "Cp", main = "Mallow C_p")
+n <-nrow(df)
+AIC <- n*log(rs$rss/n) + (2:4)*2
+plot(AIC ~ I(1:3), ylab="AIC", xlab="Number of Predictors")
+```
+
+The reduced model with the lowest AIC has 2 variables and is $stack.loss \sim Air.Flow + Water.Temp$.  We note this is the same model indicated by the Mallow $Cp$ criterion. 
+
+### Check the model for outliers and influential points. 
+
+#### Check for outliers. 
+
+```{r}
+lm.fit <- lm(stack.loss ~ Air.Flow + Water.Temp, data = df)
+numPredictors <- 2
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-numPredictors+1
+n<-nrow(df)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+
+outlier.index <- abs(studentized.residuals) > abs(t.val.alpha)
+
+outliers <- df[outlier.index==TRUE,]
+
+if(nrow(outliers)>=1)
+{
+  pander(outliers, caption = "outliers")
+}
+
+```
+
+Here we look for studentized residuals that fall outside the interval given by the Bonferroni corrected t-values.  In the case of the reduced model we do not see any outliers.
+
+#### Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.   
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+We see that data element 21 is an influential point for the reduced model under the criterie $D_i > \frac{1}{2}$. Elements 1 and 3 are also influential under the criteria $D_i > \frac{4}{n}$
+
+### Now return to the full model, determine whether there are any outliers or influential points
+
+#### Check for outliers. 
+
+```{r}
+lm.fit <- lm(stack.loss ~ .,data=df)
+numPredictors<- 3
+studentized.residuals <- rstudent(lm.fit)
+max.residual <- studentized.residuals[which.max(abs(studentized.residuals))]
+range.residuals <- range(studentized.residuals)
+names(range.residuals) <- c("left", "right")
+pander(data.frame(range.residuals=t(range.residuals)), caption="Range of Studentized residuals")
+p<-numPredictors+1
+n<-nrow(df)
+t.val.alpha <- qt(.05/(n*2),n-p-1)
+pander(data.frame(t.val.alpha = t.val.alpha), caption = "Bonferroni corrected t-value")
+
+outlier.index <- abs(studentized.residuals) > abs(t.val.alpha)
+
+outliers <- df[outlier.index==TRUE,]
+
+if(nrow(outliers)>=1)
+{
+  pander(outliers, caption = "outliers")
+}
+
+```
+
+Here we look for studentized residuals that fall outside the interval given by the Bonferroni corrected t-values.  we see there are no outliers for the full model
+
+#### Check for influential points. 
+
+We plot the Cook's distances and the residual-leverage plot with level set contours of the Cook distance.  
+
+```{r}
+plot(lm.fit,which =4)
+plot(lm.fit,which = 5)
+```
+
+We see element 21 is an infuential point, and that 1 and 4 are also influential under the criteria $D_i > \frac{4}{n}$.  Since element 1 is an influential in both the full and reduced model we remove that alsong with element 21. 
+
+### Eliminate the outliers and influential points for the full model and then repeat the variable selection procedures.
+
+```{r}
+df <- df[-c(1,21),]
+regsubsets.out <- regsubsets(stack.loss ~ .,data=df,method = "exhaustive",nvmax=8) 
+rs <- summary(regsubsets.out)
+rs$which
+plot(regsubsets.out, scale = "Cp", main = "Mallow C_p")
+n <-nrow(df)
+AIC <- n*log(rs$rss/n) + (2:4)*2
+plot(AIC ~ I(1:3), ylab="AIC", xlab="Number of Predictors")
+
+```
+
+We see that the subset selection routine has chosen the same model $stack.loss \sim Air.Flow + Water.Temp$.
+
+
+
+
+
