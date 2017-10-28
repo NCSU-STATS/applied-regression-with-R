@@ -1,0 +1,132 @@
+---
+title: "NCSU ST 503 Discussion 10"
+subtitle: "Probem  11.6 Faraway, Julian J. Linear Models with R CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+## 10.6 PCA analysis of kanga dataset 
+The dataset kanga contains data on the skulls of historical kangaroo specimens. 
+
+### (a) Compute a PCA on (the 18 skull measurements. You will need to exclude observations with missing values. What percentage of variation is explained by the first principal component? 
+
+
+```{r}
+rm(list = ls())
+data("kanga", package="faraway")
+df <- kanga 
+df <-na.omit(df)
+class.labels <- df$sex
+class.labels.species <- df$species
+df <-subset ( df,select = -c(species,sex))
+pca.kanga <- prcomp(df)
+#pca.kanga.princomp <- princomp(df)
+summary(pca.kanga)
+```
+
+47 data elements were removed due to missing values in the measurement dimensions. We see that %90 of variance in the measurements is explained by the first principal component.
+
+### (b) Provide the loadings for the first principal component. What variables are prominent? 
+
+The loadings for a principal component $\mathbf{u}_i$ are the values of the dimensions $u_{i j}$ , in our case the measurements. We note that the textbook uses r method prcomp to perform principal components and that it gets loadings from the rot matrix.  There is another r function in common use for pca - princomp.  This method has a loading structure in the output.  We tested this method and got a vector similar to the other method except all the signs were reversed.  This is OK because the direction is the same - i.e. if we project all the data points on the first version, we'll get the same points as if we had projected on the second version.  We also note there is some confusion on the difference between eigenvectors and loadings. The rot matrix is orthogonal - we checked this for a few values 
+
+```
+t(pca.kanga$rotation[,1]) %*%  pca.kanga$rotation[,1]
+t(pca.kanga$rotation[,3]) %*%  pca.kanga$rotation[,4]
+t(pca.kanga$rotation[,1]) %*%  pca.kanga$rotation[,2]
+```
+
+```{r}
+pander( data.frame(first.pc.loadings =round(pca.kanga$rotation[,1], 3)), caption ="First Principal Component")
+```
+
+We note that the following measurements all have loadings greater than .2
+
+$$\{ basilar.length,\;\; occipitonasal.length,\;\; palate.length,\;\; nasal.length,\;\; mandible.length,\;\; zygomatic.width \}$$
+
+### (c) Repeat the PCA but with the variables all scaled to the same standard deviation. How do the percentage of variation explained and the first principal component differ from those found in the previous PCA? 
+
+#### PCA of scaled measurements
+
+```{r}
+pca.kanga.scaled <- prcomp(df,scale. = TRUE)
+summary(pca.kanga.scaled)
+```
+
+After scaling the proportion of variance explained by the first principal component has dropped to .69
+
+
+### (d) Give an interpretation of the second principal component. 
+
+```{r}
+pander( data.frame(first.pc.loadings =round(pca.kanga$rotation[,2], 3)), caption ="Second Principal Component")
+```
+
+As evidenced by the loadings, the first principal component mainly account for variation in length feature.  The second principal component is primarily a contrast between the variables $\{occipitonasal.length, \;\; nasal.length \}$ and $\{ramus.height,\;\; crest.width\}$
+
+### (e) Compute the Mahalanobis distances and plot appropriately to check for outliers. 
+
+We calculate the distances in the unscaled and scaled data
+
+```{r}
+require(MASS)
+rob.kanga <- cov.rob(df)
+mahalanobis.distances <- mahalanobis(df, center=rob.kanga$center, cov=rob.kanga$cov)
+n <- nrow(df)
+p <- ncol(df)
+plot(qchisq(1:n/(n+1),p), sort(mahalanobis.distances), xlab=expression(paste(chi^2," quantiles")), ylab="Sorted Mahalanobis distances", main = "Unscaled Mahlanobis Distances")
+abline(0,1)
+```
+
+```{r}
+
+rob.kanga <- cov.rob(scale(df))
+mahalanobis.distances <- mahalanobis(scale(df), center=rob.kanga$center, cov=rob.kanga$cov)
+n <- nrow(df)
+p <- ncol(df)
+plot(qchisq(1:n/(n+1),p), sort(mahalanobis.distances), xlab=expression(paste(chi^2," quantiles")), ylab="Sorted Mahalanobis distances")
+abline(0,1)
+```
+
+
+### (f) Make a scatterplot of the first and second principal components using a different plotting symbol depending on the sex of the specimen. Do you think these two components would be effective in determining the sex of a skull?
+
+```{r}
+scores <- data.frame(class.labels, pca.kanga.scaled$x[,1:2])
+
+qplot(x=PC1, y=PC2, data=scores, colour=factor(class.labels))# + title("PCA1 PCA2 ~ Sex") +theme(legend.position="none")
+
+```
+
+```{r}
+
+scores <- data.frame(class.labels.species, pca.kanga.scaled$x[,1:2])
+
+
+qplot(x=PC1, y=PC2, data=scores, colour=factor(class.labels.species))# + title("PCA1 PCA2 ~ Sex") +theme(legend.position="none")
+```
+
+We see that the measurements do not allow for a linear classifier for discriminating sex via the first two PCA projections. We can discriminate the species fulignosus from giganteus and melanops.
+
+
+
