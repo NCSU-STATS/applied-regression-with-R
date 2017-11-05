@@ -22,14 +22,122 @@ library(pander)
 library(faraway)
 ```
 
-## 11.1
+## 11.1 seatpos PCR analysis
+
+Using the seatpos data, perform a PCR analysis with hipcenter as the response and HtShoes, Ht, Seated, Arm, Thigh and Leg as predictors. Select an appropriate number of components and give an interpretation to those you choose. Add Age and Weight as predictors and repeat the analysis. Use both models to predict the response for predictors taking these values: 
+
+$$(Age, Weight, HtShoes, Ht, Seated, Arm, Thigh, Leg) =(64.800, 263.700, 181.080, 178.560, 91.440, 35.640, 40.950, 38.790)$$
+
+
 
 ```{r,echo=TRUE}
 rm(list = ls())
-data(prostate, package="faraway");
-df <- prostate
+data(seatpos, package="faraway")
+df <- seatpos
+df.pca.inputs <-subset ( df,select = c("HtShoes", "Ht", "Seated", "Arm", "Thigh","Leg"))
+mean.df <-apply(df.pca.inputs,2,mean  )
+sd.df <-apply(df.pca.inputs,2,sd)
+
+pca.seatpos <- prcomp(df.pca.inputs,scale. = TRUE)
+summary(pca.seatpos)
 ```
 
+We see that the first three PCA cpmonents account for 96.5% of the variance and the prportion of the variance in the third component is 0.8%.  We could choose to fit a regression model with the first two or three principal components. First we investigate the loadings on the first two principal components to see if we can discern any patterns that will wllow for interpretation. Based on that we can decide how many components to put in the model.
+
+```{r}
+pander( data.frame(first.pc.loadings =round(pca.seatpos$rotation[,1], 3)), caption ="First Principal Component")
+```
+
+```{r}
+pander( data.frame(first.pc.loadings =round(pca.seatpos$rotation[,2], 3)), caption ="Second Principal Component")
+```
+
+We see that the first component is an average size measure while the second is a contrast measure between $\{Arm,Thigh\}$ and $\{HtShoes,Ht,Seated,Leg\}$.
+
+```{r}
+pander( data.frame(first.pc.loadings =round(pca.seatpos$rotation[,3], 3)), caption ="Third Principal Component")
+```
+
+The third principal component is a contrast between $\{Arm,Leg\}$ and $\{HtShoes,Ht,Seated,Thigh\}$  We leave this out of the regression model. 
+
+Here's a bubble plot of the first 2 componets sized by the response. 
+
+```{r}
+scores <- data.frame(seatpos$hipcenter, pca.seatpos$x[,1:2])
+
+qplot(x=PC1, y=PC2, data=scores )+ geom_point(aes(size = seatpos.hipcenter))
+```
+
+Now we perform the PCR on the first 2 components. 
+
+```{r}
+lm.pcr <- lm(seatpos$hipcenter ~ pca.seatpos$x[,1:2])
+summary(lm.pcr)
+```
+
+### Full Model
+
+```{r}
+df.pca.inputs.full <-subset ( df,select = c("HtShoes", "Ht", "Seated", "Arm", "Thigh","Leg", "Age","Weight"))
+mean.df.full <-apply(df.pca.inputs.full,2,mean  )
+sd.df.full <-apply(df.pca.inputs.full,2,sd)
+pca.seatpos.full <- prcomp(df.pca.inputs.full,scale. = TRUE)
+summary(pca.seatpos.full)
+
+pander( data.frame(first.pc.loadings =round(pca.seatpos.full$rotation[,1], 3)), caption ="First Principal Component")
+pander( data.frame(first.pc.loadings =round(pca.seatpos.full$rotation[,2], 3)), caption ="Second Principal Component")
+pander( data.frame(first.pc.loadings =round(pca.seatpos.full$rotation[,3], 3)), caption ="Third Principal Component")
+scores.full <- data.frame(seatpos$hipcenter, pca.seatpos.full$x[,1:2])
+
+qplot(x=PC1, y=PC2, data=scores.full )+ geom_point(aes(size = seatpos.hipcenter))
+
+lm.pcr.full <- lm(seatpos$hipcenter ~ pca.seatpos.full$x[,1:2])
+summary(lm.pcr.full)
+```
+We tried three PC's but did not achieve significan trsults for the thirs component's coefficient and we dropped that term from the model.  The First PC had the same interpretation while second PC added Age and Weight to the Arm ,Thigh part of the contrast $\{Arm,Thigh\}$ and $\{HtShoes,Ht,Seated,Leg\}$ from our first model.  Thus the second PC can be interpreted as a contrast between $\{Arm,Thigh, Age, Weight\}$ and $\{HtShoes,Ht,Seated,Leg\}$. 
+
+To do the prediction we need to scale (we used scaling) and project the test point onto the the first two PCA.  We were aslo careful when creating the prediction data element to order the variables as they were in the rotation matrix.  We had some trouble with the predict function so we went ahead and calculated the predicted value manually.  First we scaled, then rotated, then took the first 2 components to calculate $\hat{\beta} \cdot \; x_0$ 
+
+```{r, echo=TRUE}
+DFTest <- data.frame( HtShoes=181.080, Ht=178.560, Seated=91.440, Arm=35.640, Thigh=40.950, Leg=38.7,Age=64.800, Weight=263.700)
+
+x <- as.matrix(DFTest)
+
+x <- (x-mean.df.full) / sd.df.full
+
+R <- pca.seatpos.full$rotation 
+
+x.r <- R %*% t(x)
+
+pred.manual.comp  <- lm.pcr.full$coefficients["(Intercept)"] +  lm.pcr.full$coefficients["pca.seatpos.full$x[, 1:2]PC1"] * x.r[1,] +   lm.pcr.full$coefficients["pca.seatpos.full$x[, 1:2]PC2"] * x.r[2,]
+names(pred.manual.comp) <- "predicted.hipcenter"
+
+pander(data.frame(pred.manual.comp=pred.manual.comp), caption = "Predicted hipcenter for full data element")
+
+```
+
+Now we calculate the predicted hipcenter for the reduced data in a similar fashion- i.e. no $Age, Weight$. 
+
+```{r}
+DFTest <- data.frame( HtShoes=181.080, Ht=178.560, Seated=91.440, Arm=35.640, Thigh=40.950, Leg=38.7)
+
+x <- as.matrix(DFTest)
+
+x <- (x-mean.df) / sd.df
+
+R <- pca.seatpos$rotation 
+
+x.r <- R %*% t(x)
+
+pred.manual.comp  <- lm.pcr$coefficients["(Intercept)"] +  lm.pcr$coefficients["pca.seatpos$x[, 1:2]PC1"] * x.r[1,] +   lm.pcr$coefficients["pca.seatpos$x[, 1:2]PC2"] * x.r[2,]
+
+names(pred.manual.comp) <- "predicted.hipcenter"
+
+pander(data.frame(pred.manual.comp=pred.manual.comp), caption = "Predicted hipcenter for model with no Age, Weight ")
+
+```
+
+We get a makedly different result in this case. 
 
 ## 11.2
 
