@@ -20,17 +20,18 @@ knitr::opts_chunk$set(warning=FALSE)
 knitr::opts_chunk$set(message=FALSE)
 library(pander)
 library(faraway)
+library(ggplot2)
 ```
 
 ## 11.1 seatpos PCR analysis
 
 Using the seatpos data, perform a PCR analysis with hipcenter as the response and HtShoes, Ht, Seated, Arm, Thigh and Leg as predictors. Select an appropriate number of components and give an interpretation to those you choose. Add Age and Weight as predictors and repeat the analysis. Use both models to predict the response for predictors taking these values: 
 
-$$(Age, Weight, HtShoes, Ht, Seated, Arm, Thigh, Leg) =(64.800, 263.700, 181.080, 178.560, 91.440, 35.640, 40.950, 38.790)$$
+$$( HtShoes, Ht, Seated, Arm, Thigh, Leg,Age, Weight) =( 181.080, 178.560, 91.440, 35.640, 40.950, 38.790, 64.800, 263.700)$$
 
 
 
-```{r,echo=TRUE}
+```{r}
 rm(list = ls())
 data(seatpos, package="faraway")
 df <- seatpos
@@ -139,10 +140,86 @@ pander(data.frame(pred.manual.comp=pred.manual.comp), caption = "Predicted hipce
 
 We get a makedly different result in this case. 
 
-## 11.2
+## 11.2 PLS analysis with seatpos data 
+
+Fit a PLS model to the seatpos data with hipcenter as the response and all other variables as predictors. Take care to select an appropriate number of components. Use the model to predict the response at the values of the predictors specified in the first question.
+
+Based on our PCA modelling and some experimenting we choose to go with three components. 
+
+```{r}
+set.seed(123)
+library(pls)
+pls.mod <- plsr(hipcenter ~., data=seatpos, ncomp=3, validation ="CV") 
+coefplot(pls.mod, ncomp=3, xlab="Frequency") 
+plsCV <- RMSEP(pls.mod, estimate="CV") 
+plot(plsCV,main="")
+```
+
+Now we predict the response for the test data.
+
+```{r}
+DFTest <- data.frame( HtShoes=181.080, Ht=178.560, Seated=91.440, Arm=35.640, Thigh=40.950, Leg=38.7,Age=64.800, Weight=263.700)
+
+pred.manual.comp <-predict(pls.mod, DFTest, ncomp=3)
 
 
-## 11.3
+pander(data.frame(pred.manual.comp=pred.manual.comp), caption = "PLS predicted hipcenter")
+```
+
+
+## 11.3 Ridge regression with seatpos data 
+
+Fit a ridge regression model to the seatpos data with hipcenter as the response and all other variables as predictors. Take care to select an appropriate amount of shrinkage. Use the model to predict the response at the values of the predictors specified in the first question.
+
+First we make a few plots to see what the range of $\lambda$ should be.
+
+```{r}
+require(MASS) 
+df <-seatpos
+mean.df.full <-apply(df,2,mean  )
+sd.df.full <-apply(df,2,sd)
+df<-data.frame(scale(df, center = TRUE,scale = TRUE))
+ridge.fit <- lm.ridge(hipcenter ~., df, lambda = seq(0, 5000, len=5000))
+matplot(ridge.fit$lambda, coef(ridge.fit), type="l", xlab=expression(lambda) ,ylab=expression(hat(beta)),col=1)
+```
+
+Now we fit 500 models in the range $\lambda \in (0,100)$, find the minumum error model via cross validation, and plot the location of the $\lambda$ that minimizes the cross validation error on the coefficient plot. 
+
+```{r}
+
+ridge.fit <- lm.ridge(hipcenter ~., df, lambda = seq(0, 100, len=500))
+lambda.min.loc <-which.min(ridge.fit$GCV)
+lambda.min <- ridge.fit$GCV[lambda.min.loc]
+matplot(ridge.fit$lambda, coef(ridge.fit), type="l", xlab=expression(lambda) ,ylab=expression(hat(beta)),col=1)
+abline(v=22.24,col='red')
+
+```
+
+Here we predct the response for the ridge model with predictor values 
+
+$$HtShoes=181.080\;, Ht=178.560\;, Seated=91.440\;, Arm=35.640\$$
+$$Thigh=40.950;, Leg=38.7\;,Age=64.800\;, Weight=263.700$$
+
+We scaled the data before fitting the ridge model.  We display the code below for applying the scaling to the predictors, predicting the fit from the optimal model determined by cross validation, and then undoing the scaling on the predicted response.  
+
+```{r, echo=TRUE}
+DFTest <- data.frame( HtShoes=181.080, Ht=178.560, Seated=91.440, Arm=35.640, Thigh=40.950, Leg=38.7,Age=64.800, Weight=263.700)
+
+mean.pred <- c(mean.df.full["HtShoes"], mean.df.full["Ht"], mean.df.full["Seated"], mean.df.full["Arm"], mean.df.full["Thigh"],mean.df.full["Leg"], mean.df.full["Age"],mean.df.full["Weight"])
+
+sd.pred <- c(sd.df.full["HtShoes"], sd.df.full["Ht"], sd.df.full["Seated"], sd.df.full["Arm"], sd.df.full["Thigh"],sd.df.full["Leg"], sd.df.full["Age"],sd.df.full["Weight"])
+
+x <- as.matrix(DFTest)
+
+x <- (x-mean.pred) / sd.pred
+
+ypred <- cbind(1,as.matrix(x)) %*% coef(ridge.fit)[112,]
+
+pred.manual.comp <- ypred*sd(seatpos$hipcenter) +mean(seatpos$hipcenter)
+
+pander(data.frame(pred.manual.comp=pred.manual.comp), caption = "ridge Regression predicted hipcenter")
+
+```
 
 
 ## 11.4
