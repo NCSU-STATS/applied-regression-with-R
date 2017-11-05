@@ -1,0 +1,40 @@
+---
+title: "NCSU ST 503 HW 10"
+subtitle: "Probems 11.1, 11.2, 11.3, and 11.4  Faraway, Julian J. Linear Models with R, Second Edition Chapman & Hall / CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+fontsize: 12pt
+header-includes:
+   - \usepackage{bbm}
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+library(pander)
+library(faraway)
+```
+
+## 11.1
+
+```{r,echo=TRUE}
+rm(list = ls())
+data(prostate, package="faraway");
+df <- prostate
+```
+
+
+## 11.2
+
+
+## 11.3
+
+
+## 11.4

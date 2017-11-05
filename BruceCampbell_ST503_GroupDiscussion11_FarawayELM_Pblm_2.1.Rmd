@@ -1,0 +1,161 @@
+---
+title: "NCSU ST 503 Discussion 11"
+subtitle: "Probem  2.1 Faraway, Julian J. Extending the Linear Model with R: Generalized Linear, Mixed Effects and Nonparametric Regression Models CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+## 2.1 wbca analysis
+
+```{r}
+rm(list = ls())
+library(faraway)
+data("wbca", package="faraway")
+df <- wbca 
+```
+
+The dataset wbca comes from a study of breast cancer in Wisconsin. There are 681 cases of potentially cancerous tumors of which 238 are actually malignant. Determining whether a tumor is really malignant is traditionally determined by an invasive surgical procedure. The purpose of this study was to determine whether a new procedure called fine needle aspiration, which draws only a small sample of tissue, could be effective in determining tumor status. 
+
+### (a) Plot the relationship between the classification and BNucl. i. Explain why plot(Class ~ BNucl, wbca) does not work well. ii. Create a factor version of the response and produce a version of the first panel of Figure 2.1. Comment on the shape of the boxplots. iii. Produce a version of the second panel of Figure 2.1. What does this plot say about the distribution? iv. Produce a version of the interleaved histogram shown in Figure 2.2 and comment on the distribution. 
+
+Here we plot $Class \sim BNucl$
+
+```{r}
+plot(Class ~ BNucl, wbca)
+```
+
+We see that since $BNucl$ is discrete we don't have a sense of how the variable is distributed by class well since the points overlap on the plot. A box plot provides a better visualization of the distribution by class.
+
+```{r}
+df$factor.class <- as.factor(wbca$Class)
+boxplot(BNucl ~factor.class,df)
+```
+
+The boxplot show us that the $BNucl$ feature is a viable candidate for predicting cancer status.  We can also add noise to the $Class \sim BNucl$ plot to remove the overlap in the points. 
+
+```{r}
+plot(jitter(Class,0.15) ~ jitter(BNucl), wbca, xlab="BNucl", ylab="Class : tumor status", pch=".",col='red')
+```
+
+It looks like the $BNucl$ feature may be conditionally (on the class) modeled as a multinomial distribution.  Most of the mass for the positive class is located at $BNucl =1$ while most of the mass for the negative class is located at $BNucl=10$.
+
+```{r}
+library(ggplot2)
+ggplot(df, aes(x=BNucl, color=factor.class)) + geom_histogram(position="dodge", binwidth=3, aes(y=..density..))
+```
+
+### (b) Produce a version of Figure 2.3 for the predictors BNucl and Thick. Produce an alternative version with only one panel but where the two types are plotted differently. Compare the two plots and describe what they say about the ability to distinguish the two types using these two predictors. 
+
+
+```{r}
+ggplot(wbca, aes(x=BNucl,y=Thick))+geom_point(alpha=0.2, position=position_jitter())+facet_grid(~ Class)
+```
+
+```{r}
+qplot(x=BNucl, y=Thick, data=df, colour=factor(factor.class))# + title("PCA1 PCA2 ~ Sex") +theme(legend.position="none")
+```
+We see that a higher value of $BNucl$ is associated with an elevated value of $Thick$ and that a lower value of $BNucl$ is associated with a lower value of $Thick$.  $Thick$ is a good candidate for inclusion in a mode using $BNucl$ to discriminate cancer status. 
+
+###(c) Fit a binary regression with Class as the response and the other nine variables as predictors. Report the residual deviance and associated degrees of freedom. Can this information be used to determine if this model fits the data? Explain. 
+
+```{r}
+lm.logistic <- glm(Class ~ ., family = binomial, wbca)
+summary(lm.logistic)
+```
+
+The deviance is used for hypothesis testing in model comparison. Since the deviance of our full model is markedly different from the deviance of the null model with no predictors we can conclude that some amount of model fit is achieved.
+
+###(e) Suppose that a cancer is classified as benign if p > 0.5 and malignant if p < 0.5. Compute the number of errors of both types that will be made if this method is applied to the current data with the reduced model.
+
+```{r}
+pred.prob <- predict(lm.logistic, type="response")
+
+class.predicted <- pred.prob>0.5
+
+TB <- table(df$factor.class, class.predicted)
+TB
+```
+
+We see that the false positive rate is $10/(228+10)=0.04201681$ and the false negative rate is $9/(434+9)=0.02031603$
+
+### (f) Suppose we change the cutoff to 0.9 so that p < 0.9 is classified as malignant and p > 0.9 as benign. Compute the number of errors in this case. 
+
+
+```{r}
+pred.prob <- predict(lm.logistic, type="response")
+
+class.predicted <- pred.prob>0.9
+
+TB <- table(df$factor.class, class.predicted)
+TB
+```
+
+We see that the false positive rate is $1/(237+1)=0.004201681$ and the false negative rate is $16/(427+16)=0.03611738$
+
+
+### (g) Produce an ROC plot and comment on effectiveness of the new diagnostic test. 
+
+```{r}
+library(pROC)
+g <- roc(Class~pred.prob, data = wbca)
+
+plot(g, main = paste("AUC =", auc(g),sep = ""))
+```
+
+As expected the ROC curve shows this is a very effective diagnostic test. 
+
+### (h) It is usually misleading to use the same data to fit a model and test its predictive ability. To investigate this, split the data into two parts - assign every third observation to a test set and the remaining two thirds of the data to a training set. Use the training set to determine the model and the test set to assess its predictive performance. Compare the outcome to the previously obtained results.
+
+
+```{r}
+set.seed(123)
+train <- sample(nrow(wbca), floor(nrow(df)* 2/3))
+
+DFTrain <-wbca[train,]
+
+DFTest <-wbca[-train,]
+
+TDTrain <- table(DFTrain$Class)
+
+TDTest <- table(DFTest$Class)
+
+ratio.class <- TDTrain / TDTest
+
+lm.logistic <- glm(Class ~ ., family = binomial, DFTrain)
+summary(lm.logistic)
+
+pred.prob.test <- predict(lm.logistic, type="response",newdata = DFTest)
+
+class.predicted.test <- pred.prob.test>0.9
+
+TB <- table(DFTest$Class, class.predicted.test)
+TB
+
+g <- roc(Class~pred.prob.test, data = DFTest)
+
+plot(g, main = paste("AUC =", auc(g),sep = ""))
+
+```
+
+We see that we have accuracy $1/(73+1) = 0.01351351$ on the negative class and a false negative rate of $6/(147+6)=  0.03921569$  In this case we have very good evidence that the classifier will perform well on new data.  
+
