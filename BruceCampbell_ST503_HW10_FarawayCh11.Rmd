@@ -197,8 +197,7 @@ abline(v=22.24,col='red')
 
 Here we predct the response for the ridge model with predictor values 
 
-$$HtShoes=181.080\;, Ht=178.560\;, Seated=91.440\;, Arm=35.640\$$
-$$Thigh=40.950;, Leg=38.7\;,Age=64.800\;, Weight=263.700$$
+$$HtShoes=181.080\;, Ht=178.560\;, Seated=91.440\;, Arm=35.640\;Thigh=40.950;, Leg=38.7\;,Age=64.800\;, Weight=263.700$$
 
 We scaled the data before fitting the ridge model.  We display the code below for applying the scaling to the predictors, predicting the fit from the optimal model determined by cross validation, and then undoing the scaling on the predicted response.  
 
