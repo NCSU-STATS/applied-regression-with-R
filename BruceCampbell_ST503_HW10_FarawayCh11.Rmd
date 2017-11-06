@@ -364,21 +364,40 @@ yhat.ridge <- yhat.ridge.scaled* sd(df.train$siri) +mean(df.train$siri)
 
 mspe.lm.ridge <- mean((df.test$siri - yhat.ridge) ^ 2)
 
-
 ```
 
 
+### (f) Lasso regression 
+
+```{r}
+library(lars)
+df <- df.train[ , -which(names(df.train) %in% c("siri"))]
+x <- as.matrix(df)
+lm.lasso<- lars(x,df.train$siri)
+plot(lm.lasso)
+
+cv.lm.lasso <- cv.lars(x,df.train$siri)
+
+cv.lm.lasso$index[which.min(cv.lm.lasso$cv)]
+
+pander(data.frame(predict(lm.lasso,s=0.8181818,type="coef",mode="fraction")$coef),caption = "Lasso Model")
+
+
+df <- df.test[ , -which(names(df.test) %in% c("siri"))]
+x <- as.matrix(df)
+yhat.lasso <- predict(lm.lasso,x,s=0.8181818,mode="fraction")$fit
+
+mspe.lm.lasso <- mean((df.test$siri -yhat.lasso) ^ 2)
+
+
+```
 
 
 ### Performance Results 
 
 ```{r}
-pander(data.frame(mspe.lm=mspe.lm, mspe.lm.regsubsets=mspe.lm.regsubsets,mspe.lm.pca=mspe.lm.pca,mspe.lm.pls=mspe.lm.pls,mspe.lm.ridge=mspe.lm.ridge),caption = "MSPE Results")
-
+pander(data.frame(mspe.lm=mspe.lm, mspe.lm.regsubsets=mspe.lm.regsubsets,mspe.lm.pca=mspe.lm.pca,mspe.lm.pls=mspe.lm.pls,mspe.lm.ridge=mspe.lm.ridge,mspe.lm.lasso=mspe.lm.lasso),caption = "MSPE Results")
 
 ```
 
 The PLS and ridge models performed  the best.  We are concerned about the PCA results and will debug this further. We did not get good results with the PCA using 3 components, when we allowed all components we did not see a reduction in the MSPE to the full linear model.  This is why we're concerned. Using the full set of PCA components is just a rotation of the data, so we'd expect similar MSPE results. 
-
-
-
