@@ -43,7 +43,7 @@ pca.seatpos <- prcomp(df.pca.inputs,scale. = TRUE)
 summary(pca.seatpos)
 ```
 
-We see that the first three PCA cpmonents account for 96.5% of the variance and the prportion of the variance in the third component is 0.8%.  We could choose to fit a regression model with the first two or three principal components. First we investigate the loadings on the first two principal components to see if we can discern any patterns that will wllow for interpretation. Based on that we can decide how many components to put in the model.
+We see that the first three PCA cpmonents account for 96.5% of the variance and the proportion of the variance in the third component is 0.8%.  We could choose to fit a regression model with the first two or three principal components. First we investigate the loadings on the first two principal components to see if we can discern any patterns that will allow for interpretation. Based on that we can decide how many components to put in the model.
 
 ```{r}
 pander( data.frame(first.pc.loadings =round(pca.seatpos$rotation[,1], 3)), caption ="First Principal Component")
@@ -61,7 +61,7 @@ pander( data.frame(first.pc.loadings =round(pca.seatpos$rotation[,3], 3)), capti
 
 The third principal component is a contrast between $\{Arm,Leg\}$ and $\{HtShoes,Ht,Seated,Thigh\}$  We leave this out of the regression model. 
 
-Here's a bubble plot of the first 2 componets sized by the response. 
+Here's a bubble plot of the first 2 components sized by the response. 
 
 ```{r}
 scores <- data.frame(seatpos$hipcenter, pca.seatpos$x[,1:2])
@@ -95,9 +95,9 @@ qplot(x=PC1, y=PC2, data=scores.full )+ geom_point(aes(size = seatpos.hipcenter)
 lm.pcr.full <- lm(seatpos$hipcenter ~ pca.seatpos.full$x[,1:2])
 summary(lm.pcr.full)
 ```
-We tried three PC's but did not achieve significan trsults for the thirs component's coefficient and we dropped that term from the model.  The First PC had the same interpretation while second PC added Age and Weight to the Arm ,Thigh part of the contrast $\{Arm,Thigh\}$ and $\{HtShoes,Ht,Seated,Leg\}$ from our first model.  Thus the second PC can be interpreted as a contrast between $\{Arm,Thigh, Age, Weight\}$ and $\{HtShoes,Ht,Seated,Leg\}$. 
+We tried three PC's but did not achieve significant results for the this component's coefficient and we dropped that term from the model.  The First PC had the same interpretation while second PC added Age and Weight to the Arm ,Thigh part of the contrast $\{Arm,Thigh\}$ and $\{HtShoes,Ht,Seated,Leg\}$ from our first model.  Thus the second PC can be interpreted as a contrast between $\{Arm,Thigh, Age, Weight\}$ and $\{HtShoes,Ht,Seated,Leg\}$. 
 
-To do the prediction we need to scale (we used scaling) and project the test point onto the the first two PCA.  We were aslo careful when creating the prediction data element to order the variables as they were in the rotation matrix.  We had some trouble with the predict function so we went ahead and calculated the predicted value manually.  First we scaled, then rotated, then took the first 2 components to calculate $\hat{\beta} \cdot \; x_0$ 
+To do the prediction we need to scale (we used scaling) and project the test point onto the the first two PCA.  We were also careful when creating the prediction data element to order the variables as they were in the rotation matrix.  We had some trouble with the predict function so we went ahead and calculated the predicted value manually.  First we scaled, then rotated, then took the first 2 components to calculate $\hat{\beta} \cdot \; x_0$ 
 
 ```{r, echo=TRUE}
 DFTest <- data.frame( HtShoes=181.080, Ht=178.560, Seated=91.440, Arm=35.640, Thigh=40.950, Leg=38.7,Age=64.800, Weight=263.700)
@@ -138,7 +138,7 @@ pander(data.frame(pred.manual.comp=pred.manual.comp), caption = "Predicted hipce
 
 ```
 
-We get a makedly different result in this case. 
+We get a markedly different result in this case. 
 
 ## 11.2 PLS analysis with seatpos data 
 
@@ -183,7 +183,7 @@ ridge.fit <- lm.ridge(hipcenter ~., df, lambda = seq(0, 5000, len=5000))
 matplot(ridge.fit$lambda, coef(ridge.fit), type="l", xlab=expression(lambda) ,ylab=expression(hat(beta)),col=1)
 ```
 
-Now we fit 500 models in the range $\lambda \in (0,100)$, find the minumum error model via cross validation, and plot the location of the $\lambda$ that minimizes the cross validation error on the coefficient plot. 
+Now we fit 500 models in the range $\lambda \in (0,100)$, find the minimum error model via cross validation, and plot the location of the $\lambda$ that minimizes the cross validation error on the coefficient plot. 
 
 ```{r}
 
@@ -192,10 +192,9 @@ lambda.min.loc <-which.min(ridge.fit$GCV)
 lambda.min <- ridge.fit$GCV[lambda.min.loc]
 matplot(ridge.fit$lambda, coef(ridge.fit), type="l", xlab=expression(lambda) ,ylab=expression(hat(beta)),col=1)
 abline(v=22.24,col='red')
-
 ```
 
-Here we predct the response for the ridge model with predictor values 
+Here we predict the response for the ridge model with predictor values 
 
 $$HtShoes=181.080\;, Ht=178.560\;, Seated=91.440\;, Arm=35.640\;Thigh=40.950;, Leg=38.7\;,Age=64.800\;, Weight=263.700$$
 
@@ -221,4 +220,165 @@ pander(data.frame(pred.manual.comp=pred.manual.comp), caption = "ridge Regressio
 ```
 
 
-## 11.4
+## 11.4 fat Analysis
+
+Take the fat data, and use the percentage of body fat, siri, as the response and the other variables, except brozek and density as potential predictors. Remove every tenth observation from the data for use as a test sample. Use the remaining data as a training sample building the following models:
+Use the models you find to predict the response in the test sample. Make a report on the performances of the models.
+
+
+```{r}
+rm(list = ls())
+data(fat, package="faraway")
+df<- fat
+df <- df[ , -which(names(df) %in% c("brozek","density"))]
+set.seed(123)
+train <-  (1:nrow(fat) / 10) %%1==0
+
+df.train <-df[train,]
+
+df.test <-df[-train,]
+
+```
+
+### (a) Linear regression with all predictors 
+
+```{r}
+lm.fit <- lm(siri ~ .,data = df.train)
+summary(lm.fit)
+
+yhat.test <- predict(lm.fit,newdata = df.test, type="response")
+
+mspe.lm <- mean((df.test$siri - yhat.test) ^ 2)
+
+```
+
+### (b) Linear regression with variables selected using AIC 
+
+We plot the AIC for the models here and compare to the exhaustive search for reference. 
+
+```{r}
+library(leaps)
+n <- nrow(df.train)
+regsubsets.out <- regsubsets(siri ~ .,data=df.train,method = "exhaustive") 
+rs <- summary(regsubsets.out) 
+rs$which
+AIC <- n*log(rs$rss/n) + (2:9)*2
+plot(AIC ~ I(1:8), ylab="AIC", xlab="Number of Predictors")
+```
+
+We see that the model with the lowest AIC has 8 predictors.  The best 8 predictor model being $height + adipos + free + chest + abdom +  biceps + forearm + wrist$
+
+Now we fit the model and calculate the MSPE 
+
+```{r}
+lm.fit <- lm(siri ~ height + adipos + free + chest + abdom +  biceps + forearm + wrist,data = df.train)
+summary(lm.fit)
+
+yhat.test <- predict(lm.fit,newdata = df.test, type="response")
+
+mspe.lm.regsubsets <- mean((df.test$siri - yhat.test) ^ 2)
+
+```
+
+### (c) Principal component regression 
+
+```{r}
+df.pca.inputs <-df.train[ , -which(names(df.train) %in% c("siri"))]
+mean.df <-apply(df.pca.inputs,2,mean  )
+sd.df <-apply(df.pca.inputs,2,sd)
+
+pca.results <- prcomp(df.pca.inputs,scale. = TRUE)
+summary(pca.results)
+s<- summary(pca.results)
+plot(s$sdev,main = "Scree Plot for PCA")
+```
+
+Based on the scree plot we choose 5 principal components for our model. 
+
+```{r}
+lm.pcr <- lm(df.train$siri ~ pca.results$x[,1:15])
+summary(lm.pcr)
+
+df.test.predictors <- df.test[ , -which(names(df.test) %in% c("siri"))]
+df.test.predictors <- scale(df.test.predictors,center = pca.results$center,scale = pca.results$scale)
+df.test.predictors <- data.frame(df.test.predictors)
+yhat.pca <-predict(lm.pcr,df.test.predictors)
+
+mspe.lm.pca <- mean((df.test$siri - yhat.pca) ^ 2)
+
+plot(df.test$siri,df.test$siri - yhat.pca)
+
+```
+Our MSPE is high and the residuals are showing a strong linear association with the response - even if we include all components as we did above.
+This is definitely a problem with the code we've written.  We'll revisit this if there is time. 
+
+
+### (d) Partial least squares 
+
+```{r}
+set.seed(123)
+pls.mod <- plsr(siri ~., data=df.train, ncomp=5, validation ="CV") 
+coefplot(pls.mod, ncomp=3, xlab="Frequency") 
+plsCV <- RMSEP(pls.mod, estimate="CV") 
+plot(plsCV,main="")
+```
+
+Now we find the MSPE for the test set.
+
+```{r}
+
+yhat.test <- predict(pls.mod,newdata = df.test, type="response")
+
+mspe.lm.pls <- mean((df.test$siri - yhat.test) ^ 2)
+
+```
+
+### (e) Ridge regression 
+
+```{r}
+mean.df.full <-apply(df.train,2,mean  )
+sd.df.full <-apply(df.train,2,sd)
+df<-data.frame(scale(df.train, center = TRUE,scale = TRUE))
+ridge.fit <- lm.ridge(siri ~., df, lambda = seq(0, .1, len=1000))
+which.min(ridge.fit$GCV)
+matplot(ridge.fit$lambda, coef(ridge.fit), type="l", xlab=expression(lambda) ,ylab=expression(hat(beta)),col=1)
+abline(v=0.0282282282,col='red')
+```
+
+Here we predict the test set response for the ridge model.  We scaled the data before fitting the ridge model.  We display the code below for applying the scaling to the predictors, predicting the fit from the optimal model determined by cross validation, and then undoing the scaling on the predicted response.  
+
+```{r, echo=TRUE}
+df <- df.test[ , -which(names(df.test) %in% c("siri"))]
+x <- as.matrix(df)
+
+
+df.train.predict <- df.train[ , -which(names(df.train) %in% c("siri"))]
+mean.pred.train <-apply(df.train.predict,2,mean  )
+sd.pred.train <-apply(df.train.predict,2,sd)
+
+x<- scale(x,center = mean.pred.train,scale = sd.pred.train)
+
+yhat.ridge.scaled <- cbind(1,as.matrix(x)) %*% coef(ridge.fit)[283,]
+
+yhat.ridge <- yhat.ridge.scaled* sd(df.train$siri) +mean(df.train$siri)
+
+mspe.lm.ridge <- mean((df.test$siri - yhat.ridge) ^ 2)
+
+
+```
+
+
+
+
+### Performance Results 
+
+```{r}
+pander(data.frame(mspe.lm=mspe.lm, mspe.lm.regsubsets=mspe.lm.regsubsets,mspe.lm.pca=mspe.lm.pca,mspe.lm.pls=mspe.lm.pls,mspe.lm.ridge=mspe.lm.ridge),caption = "MSPE Results")
+
+
+```
+
+The PLS and ridge models performed  the best.  We are concerned about the PCA results and will debug this further. We did not get good results with the PCA using 3 components, when we allowed all components we did not see a reduction in the MSPE to the full linear model.  This is why we're concerned. Using the full set of PCA components is just a rotation of the data, so we'd expect similar MSPE results. 
+
+
+
