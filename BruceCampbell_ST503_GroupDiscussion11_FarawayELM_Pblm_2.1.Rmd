@@ -83,7 +83,7 @@ lm.logistic <- glm(Class ~ ., family = binomial, wbca)
 summary(lm.logistic)
 ```
 
-The deviance is used for hypothesis testing in model comparison. Since the deviance of our full model is markedly different from the deviance of the null model with no predictors we can conclude that some amount of model fit is achieved.
+The deviance is used for hypothesis testing in model comparison. Since our response is Bernoulli we can not use the deviance for evaluating goodness of fit.  To use the deviance in this setting we would bin the responses to approximate a binomially distributed response
 
 ###(e) Suppose that a cancer is classified as benign if p > 0.5 and malignant if p < 0.5. Compute the number of errors of both types that will be made if this method is applied to the current data with the reduced model.
 
@@ -113,17 +113,6 @@ TB
 We see that the false positive rate is $1/(237+1)=0.004201681$ and the false negative rate is $16/(427+16)=0.03611738$
 
 
-### (g) Produce an ROC plot and comment on effectiveness of the new diagnostic test. 
-
-```{r}
-library(pROC)
-g <- roc(Class~pred.prob, data = wbca)
-
-plot(g, main = paste("AUC =", auc(g),sep = ""))
-```
-
-As expected the ROC curve shows this is a very effective diagnostic test. 
-
 ### (h) It is usually misleading to use the same data to fit a model and test its predictive ability. To investigate this, split the data into two parts - assign every third observation to a test set and the remaining two thirds of the data to a training set. Use the training set to determine the model and the test set to assess its predictive performance. Compare the outcome to the previously obtained results.
 
 
@@ -149,13 +138,30 @@ pred.prob.test <- predict(lm.logistic, type="response",newdata = DFTest)
 class.predicted.test <- pred.prob.test>0.9
 
 TB <- table(DFTest$Class, class.predicted.test)
-TB
+pander (TB, caption = "Confusion matrix p=0.9")
 
-g <- roc(Class~pred.prob.test, data = DFTest)
+class.predicted.test <- pred.prob.test>0.5
+TB <- table(DFTest$Class, class.predicted.test)
+pander (TB, caption = "Confusion matrix p=0.5")
 
-plot(g, main = paste("AUC =", auc(g),sep = ""))
+thresh <- seq(0.01,0.95,0.01) 
+Sensitivity <- numeric(length(thresh)) 
+Specificity <- numeric(length(thresh)) 
+for(j in seq(along=thresh))
+{
+  pp <- ifelse(pred.prob.test < thresh[j],"no","yes") 
+  xx <- xtabs( ~ Class + pp, DFTest) 
+  Specificity[j] <- xx[1,1]/(xx[1,1]+xx[1,2])
+  Sensitivity[j] <- xx[2,2]/(xx[2,1]+xx[2,2]) 
+}
+ry <- Sensitivity[thresh ==0.9]
+rx <- 1-Specificity[thresh==0.9 ]
+plot(1-Specificity,Sensitivity,type="l", main = "ROC curve - 0.9 c classifier maked in red") 
+points(x=rx,y=ry,pch = '*',col='red',cex=3)
+
+
 
 ```
 
-We see that we have accuracy $1/(73+1) = 0.01351351$ on the negative class and a false negative rate of $6/(147+6)=  0.03921569$  In this case we have very good evidence that the classifier will perform well on new data.  
-
+We see that we have error rate of $(1+6) /(73+1+6+147) = 0.030837$ using the $p=0.9$ threshold.  Using the threshold $p=0.5$ we have an accuracy $(4+3)/(70+4+3+150)=0.030837$  In this case we have very good evidence that the classifier will perform well on new data.  
+We note that our total error rates for the 2 models are the same - we may prefer one over the other based on the class conditional error rate. A ROC curve may help us in model tuning. 
