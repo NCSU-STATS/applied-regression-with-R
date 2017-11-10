@@ -1,0 +1,36 @@
+---
+title: "NCSU ST 503 HW 11"
+subtitle: "Probem  2.1,2.2,4.1 Faraway, Julian J. Extending the Linear Model with R CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+fontsize: 12pt
+header-includes:
+   - \usepackage{bbm}
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+library(pander)
+library(faraway)
+library(ggplot2)
+```
+
+## 
+Complete exercises # 1 (d, e, f, and h), and # 2  (a - c, h) from Chapter 2.
+Complete exercise # 1 (a - f) from Chapter 4.
+
+For 2.1, you have already done parts (e, f, and h) using the full 9 variable model in the group discussion. Repeat this time for the model that is chosen in part (d). Compare your results using this model to the results from the full model. 
+For 4.1, the question does not match the data completely. 
+
+(1) The problem says to ignore the variable "volact". Apparently, it was already ignored well enough since it does not appear in the dataset, so that is fine. 
+
+(2) For part (b) in 4.1, it says to fit the model using the other "5 variables" as predictors. There are 6 predictors to use, 5 numeric and one binary class variable, not 5, so use the 6.
+

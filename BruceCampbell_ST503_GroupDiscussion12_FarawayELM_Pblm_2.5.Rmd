@@ -1,0 +1,139 @@
+---
+title: "NCSU ST 503 Discussion 12"
+subtitle: "Probem  2.5 Faraway, Julian J. Extending the Linear Model with R: Generalized Linear, Mixed Effects and Nonparametric Regression Models CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+## 2.5 spector data analysis
+
+We investigate the efficacy of a new method for teaching economics.  The data has the following variables;
+
+* grade 1 = exam grades improved, 0 = not improved
+* psi 1 = student exposed to PSI (a new teach method), 0 = not exposed
+* tuce a measure of ability when entering the class
+* gpa grade point average
+
+The data originates from 
+
+Spector, L. and Mazzeo, M. (1980), "Probit Analysis and Economic Education", Journal of Economic Education, 11, 37 - 44.
+
+We will fit a logistic model with response $grade$ and predictors $psi , tuce, gpa$
+
+```{r}
+rm(list = ls())
+library(faraway)
+data("spector", package="faraway")
+df <- spector
+```
+
+Below are box plots of the variables $tuce, gpa$ by the category $psi$ We expect that the $tuce$ and $gpa$ are equally distributed among the psi class .  We also display a pivot of the grade by psi.  The association between psi and grade is not prefect and we anticipate that the tuce and gpa predictors will help explain the relationship between psi and grade.. 
+
+
+```{r}
+boxplot(tuce ~ psi,data = df, main="tuce")
+
+boxplot(gpa ~ psi,data = df, main="gpa")
+
+TB <- table(df$grade, df$psi)
+
+pander(TB, caption = "pivot showing improved or not by the psi variable")
+```
+
+We observe that the levels of tuce and gpa for the students exposed to the new method are systematically higher than those for students not exposed to the new teaching method.  This may affect our conclusions.  We might look into the possibility of weighting to alleviate any bias from the design. 
+
+```{r}
+lm.logistic <- glm(grade ~ ., family = binomial, data = df)
+summary(lm.logistic)
+```
+
+We see that the tuce variable is not significant.  We'll remove that variable from our model.  The large s.e. suggests collinearity. A plot of $tuce ~ gpa$ confirms weak collinearity.  
+
+```{r}
+rho <- cor(df$gpa ,df$tuce)
+plot(gpa ~tuce,data=df ,main = TeX("$\\rho =0.3869863$"))
+```
+
+Refitting the model $grade \sim psi + gpa$
+
+```{r}
+lm.logistic <- glm(grade ~ psi+gpa, family = binomial, data = df)
+summary(lm.logistic)
+
+```
+
+We now visualize the binned response and prepare to calculate the The Hosmer-Lemeshow statistic.
+
+```{r}
+library(dplyr)
+linpred <- predict(lm.logistic) 
+predprob <- predict(lm.logistic, type="response")
+df.mod <- mutate(df, predprob=predict(lm.logistic,type="response")) 
+gdf <- group_by(df.mod, cut(linpred, breaks=unique(quantile(linpred,(1:10)/11)))) 
+hldf <- summarise(gdf, grade=sum(grade), ppred=mean(predprob), count=n())
+```
+
+```{r}
+hldf <- summarise(gdf, y=sum(grade==1), ppred=mean(predprob), count=n())
+hldf <- mutate(hldf, se.fit=sqrt(ppred*(1-ppred)/count))
+ggplot(hldf,aes(x=ppred,y=y/count,ymin=y/count-2*se.fit,ymax=y/count+2*se.fit))+geom_point()+geom_linerange(color=grey(0.75))+geom_abline(intercept=0,slope=1)+xlab("Predicted Probability")+ylab("Observed Proportion")
+hlstat <- with(hldf, sum( (y-count*ppred)^2/(count*ppred*(1-ppred))))
+```
+
+
+```{r}
+Hosmer.Lemeshow <-1-pchisq(hlstat, nrow(hldf)-1)
+pander(data.frame(Hosmer.Lemeshow=Hosmer.Lemeshow))
+
+```
+From the observed and predicted binned probabilities and the moderate value of the Hosmer Lemeshow statistic, we conclude that there is no evidence of a significant lack of fit. 
+
+```{r}
+pred.prob <- predict(lm.logistic, type="response")
+
+class.predicted <- pred.prob>0.4
+
+TB <- table(df$grade, class.predicted)
+pander(TB ,caption = "Training set accuracy")
+```
+
+```{r}
+thresh <- seq(0.1,0.95,0.01)
+Sensitivity <- numeric(length(thresh))
+Specificity <- numeric(length(thresh))
+for(j in seq(along=thresh))
+{
+  pp <- ifelse(pred.prob < thresh[j],"no","yes")
+  xx <- xtabs( ~ grade + pp, df)
+  Specificity[j] <- xx[1,1]/(xx[1,1]+xx[1,2])
+  Sensitivity[j] <- xx[2,2]/(xx[2,1]+xx[2,2])
+}
+ry <- Sensitivity[thresh ==0.5]
+rx <- 1-Specificity[thresh==0.5 ]
+plot(1-Specificity,Sensitivity,type="l", main = "ROC curve, threshold p=0.5 indicateed in red")
+points(x=rx,y=ry,pch = '*',col='red',cex=3)
+```
+
+We conclude that there is evidence that the new training method has a positive effect in grade outcome. 
+
+
