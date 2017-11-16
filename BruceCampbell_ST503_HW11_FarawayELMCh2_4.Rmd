@@ -28,9 +28,456 @@ Complete exercises # 1 (d, e, f, and h), and # 2  (a - c, h) from Chapter 2.
 Complete exercise # 1 (a - f) from Chapter 4.
 
 For 2.1, you have already done parts (e, f, and h) using the full 9 variable model in the group discussion. Repeat this time for the model that is chosen in part (d). Compare your results using this model to the results from the full model. 
+
+
 For 4.1, the question does not match the data completely. 
 
 (1) The problem says to ignore the variable "volact". Apparently, it was already ignored well enough since it does not appear in the dataset, so that is fine. 
 
 (2) For part (b) in 4.1, it says to fit the model using the other "5 variables" as predictors. There are 6 predictors to use, 5 numeric and one binary class variable, not 5, so use the 6.
+
+## 2.1 wbca analysis
+
+```{r}
+rm(list = ls())
+library(faraway)
+data("wbca", package="faraway")
+df <- wbca
+```
+
+The dataset wbca comes from a study of breast cancer in Wisconsin. There are 681 cases of potentially cancerous tumors of which 238 are actually malignant. Determining whether a tumor is really malignant is traditionally determined by an invasive surgical procedure. The purpose of this study was to determine whether a new procedure called fine needle aspiration, which draws only a small sample of tissue, could be effective in determining tumor status. 
+
+We split the data into a training and test set for model evaluation. One third of the data is reserved for the test set. 
+
+### Fit a binary regression with Class as the response and the other nine variables as predictors. 
+```{r}
+
+set.seed(123)
+train <- sample(nrow(wbca), floor(nrow(df)* 2/3))
+
+DFTrain <-wbca[train,]
+
+DFTest <-wbca[-train,]
+
+TDTrain <- table(DFTrain$Class)
+
+TDTest <- table(DFTest$Class)
+
+ratio.class <- TDTrain / TDTest
+
+lm.logistic <- glm(Class ~ ., family = binomial, DFTrain)
+summary(lm.logistic)
+```
+
+### (d) Use AIC as the criterion to determine the best subset of variables. (Use the step function.)
+
+ 
+```{r}
+library(leaps) 
+regsubsets.out <- regsubsets(Class ~ .,data=DFTrain,method = "exhaustive",nvmax=8) 
+rs <- summary(regsubsets.out) 
+rs$which
+AIC <- 50*log(rs$rss/50) + (2:9)*2
+plot(AIC ~ I(1:8), ylab="AIC", xlab="Number of Predictors")
+plot(regsubsets.out, scale = "adjr2", main = "Adjusted R^2")
+```
+
+We see that the AIC is minimized at 4 predictors.  The best 4 predictor model is $Class \sim BNucl + NNucl + Thick + USize$ We now fit that reduced model on the training data.  
+
+```{r}
+lm.logistic.reduced <- glm(Class ~ BNucl + NNucl + Thick + USize, family = binomial, DFTrain)
+summary(lm.logistic.reduced)
+```
+
+
+###(e) Suppose that a cancer is classified as benign if p > 0.5 and malignant if p < 0.5. Compute the number of errors of both types that will be made if this method is applied to the current data with the reduced model.
+
+Full model confusion matrix on training data.
+
+```{r}
+factor.class <-as.factor(DFTrain$Class)
+pred.prob <- predict(lm.logistic, type="response")
+class.predicted <- pred.prob>0.5
+TB <- table(factor.class, class.predicted)
+TB
+```
+$p=0.5$ Full model error = ```r 14/(157+7+7+283)```
+
+Reduced model confusion matrix on training data.
+
+```{r}
+factor.class <-as.factor(DFTrain$Class)
+pred.prob <- predict(lm.logistic.reduced, type="response")
+class.predicted <- pred.prob>0.5
+TB <- table(factor.class, class.predicted)
+TB
+```
+
+$p=0.5$  Reduced model error = ```r (9+6)/(155+9+6+284)```
+
+### (f) Suppose we change the cutoff to 0.9 so that p < 0.9 is classified as malignant and p > 0.9 as benign. Compute the number of errors in this case. 
+
+Full model confusion matrix on training data.
+
+```{r}
+factor.class <-as.factor(DFTrain$Class)
+pred.prob <- predict(lm.logistic, type="response")
+class.predicted <- pred.prob>0.9
+TB <- table(factor.class, class.predicted)
+TB
+```
+$p=0.9$ Full model error = ```r 13/(163+1+12+278)```
+
+Reduced model confusion matrix on training data.
+
+```{r}
+factor.class <-as.factor(DFTrain$Class)
+pred.prob <- predict(lm.logistic.reduced, type="response")
+class.predicted <- pred.prob>0.9
+TB <- table(factor.class, class.predicted)
+TB
+```
+
+$p=0.9$  Reduced model error = ```r (14)/(164+14+276)```
+
+### (h) It is usually misleading to use the same data to fit a model and test its predictive ability. To investigate this, split the data into two parts - assign every third observation to a test set and the remaining two thirds of the data to a training set. Use the training set to determine the model and the test set to assess its predictive performance. Compare the outcome to the previously obtained results.
+
+
+#### Full model test set evaluation 
+
+```{r}
+pred.prob.test <- predict(lm.logistic, type="response",newdata = DFTest)
+
+class.predicted.test <- pred.prob.test>0.9
+
+TB <- table(DFTest$Class, class.predicted.test)
+pander (TB, caption = "Confusion matrix p=0.9")
+
+class.predicted.test <- pred.prob.test>0.5
+TB <- table(DFTest$Class, class.predicted.test)
+pander (TB, caption = "Confusion matrix p=0.5")
+
+thresh <- seq(0.01,0.95,0.01) 
+Sensitivity <- numeric(length(thresh)) 
+Specificity <- numeric(length(thresh)) 
+for(j in seq(along=thresh))
+{
+  pp <- ifelse(pred.prob.test < thresh[j],"no","yes") 
+  xx <- xtabs( ~ Class + pp, DFTest) 
+  Specificity[j] <- xx[1,1]/(xx[1,1]+xx[1,2])
+  Sensitivity[j] <- xx[2,2]/(xx[2,1]+xx[2,2]) 
+}
+ry <- Sensitivity[thresh ==0.9]
+rx <- 1-Specificity[thresh==0.9 ]
+plot(1-Specificity,Sensitivity,type="l", main = "Full Model ROC curve - 0.9 c classifier maked in red") 
+points(x=rx,y=ry,pch = '*',col='red',cex=3)
+
+```
+
+For the full model we have an accuracy of ```r (1+6)/(74+153)``` for the $p=0.9$ cutoff and ```r (3+4)/(74+153)`` for the $p=0.5$ cutoff. 
+Note that even though the accuracy is the same rate for both of these, the sensitivity and specificity will be different and there may be test implementation considerations that determine which one is preferable.  
+
+
+#### Reduced model test set evaluation
+
+```{r}
+pred.prob.test <- predict(lm.logistic.reduced, type="response",newdata = DFTest)
+
+class.predicted.test <- pred.prob.test>0.9
+
+TB <- table(DFTest$Class, class.predicted.test)
+pander (TB, caption = "Confusion matrix p=0.9")
+
+class.predicted.test <- pred.prob.test>0.5
+TB <- table(DFTest$Class, class.predicted.test)
+pander (TB, caption = "Confusion matrix p=0.5")
+
+thresh <- seq(0.01,0.95,0.01) 
+Sensitivity <- numeric(length(thresh)) 
+Specificity <- numeric(length(thresh)) 
+for(j in seq(along=thresh))
+{
+  pp <- ifelse(pred.prob.test < thresh[j],"no","yes") 
+  xx <- xtabs( ~ Class + pp, DFTest) 
+  Specificity[j] <- xx[1,1]/(xx[1,1]+xx[1,2])
+  Sensitivity[j] <- xx[2,2]/(xx[2,1]+xx[2,2]) 
+}
+ry <- Sensitivity[thresh ==0.9]
+rx <- 1-Specificity[thresh==0.9 ]
+plot(1-Specificity,Sensitivity,type="l", main = "Full Model ROC curve - 0.9 c classifier maked in red") 
+points(x=rx,y=ry,pch = '*',col='red',cex=3)
+```
+
+For the reduced model we have an accuracy of ```r (1+6)/(74+153)``` for the $p=0.9$ cutoff and ```r (1+4)/(74+153)`` for the $p=0.5$ cutoff. 
+
+The reduced model performs slightly better at the $p=0.5$ cutoff. We would choose this model - all other things being equal-  due to it's parsimony in the number of predictors used.
+
+
+## 2.2 pima data analysis 
+
+The National Institute of Diabetes and Digestive and Kidney Diseases conducted a study on 768 adult female Pima Indians living near Phoenix. The purpose of the study was to investigate factors related to diabetes. The data may be found in the the dataset pima. 
+
+### (a) Create a factor version of the test results and use this to produce an interleaved histogram to show how the distribution of insulin differs between those testing positive and negative. Do you notice anything unbelievable about the plot? 
+
+
+```{r}
+rm(list = ls())
+library(faraway)
+data("pima", package="faraway")
+df <- pima
+df$test.factor <- as.factor(pima$test)
+
+ggplot(df, aes(x=insulin, color=test.factor)) + geom_histogram(position="dodge", binwidth=3, aes(y=..density..))
+```
+We note a number of measurements of 0 insulin.  This is likely a placeholder for when no measurement was available. 
+
+
+### (b) Replace the zero values of insulin with the missing value code NA. Recreate the interleaved histogram plot and comment on the distribution. 
+
+```{r, echo=TRUE}
+df[(df$insulin==0),]$insulin =NA
+ggplot(df, aes(x=insulin, color=test.factor)) + geom_histogram(position="dodge", binwidth=3, aes(y=..density..))
+
+```
+
+### (c) Replace the incredible zeroes in other variables with the missing value code. Fit a model with the result of the diabetes test as the response and all the other variables as predictors. How many observations were used in the model fitting? Why is this less than the number of observations in the data frame. 
+
+```{r}
+df[(df$glucose==0),]$glucose =NA
+
+df[(df$triceps==0),]$triceps =NA
+
+df[(df$bmi==0),]$bmi =NA
+
+lm.logistic <- glm(test ~ glucose+diastolic+triceps+insulin+bmi+diabetes+age, family = binomial, df)
+summary(lm.logistic)
+```
+392 data elements were used to fit the model. 
+
+### (d) Refit the model but now without the insulin and triceps predictors. How many observations were used in fitting this model? Devise a test to compare this model with that in the previous question. 
+
+```{r}
+
+lm.logistic.reduced <- glm(test ~ glucose+diastolic+bmi+diabetes+age, family = binomial, df)
+summary(lm.logistic.reduced)
+```
+Only 16 observations were removed due to missing data. 
+
+We will use $D_S-D_L  \sim \chi^2_{df(L)-df(S)}$
+
+Our test statistic is ```r 346-710```  with $df(L)=384$ $df(s)=751$
+
+and the p-value ```r 1-pchisq(364, 367) ``` is not significant so insulin and triceps are not significant in models that already have the predictors used in the smaller model. 
+
+### (e) Use AIC to select a model. You will need to take account of the missing values. Which predictors are selected? How many cases are used in your selected model? 
+
+ 
+```{r}
+library(leaps) 
+df$test.factor <- NULL
+df.na.removed <- na.exclude(df)
+lm.logistic <- glm(test ~ glucose+diastolic+triceps+insulin+bmi+diabetes+age, family = binomial, df.na.removed)
+
+lm.logistic.step <- step(lm.logistic, trace=0)
+sumary(lm.logistic.step)
+
+```
+
+The model with the minimum AIC has four predictors and the selection method found that $test \sim glucose + bmi +  diabetes + age$ is the best three predictor model. 
+
+### (f) Create a variable that indicates whether the case contains a missing value. Use this variable as a predictor of the test result. Is missingness associated with the test result? Refit the selected model, but now using as much of the data as reasonable. Explain why it is appropriate to do this. 
+
+```{r}
+df<-pima
+
+df[(df$glucose==0),]$glucose =NA
+
+df[(df$triceps==0),]$triceps =NA
+
+df[(df$bmi==0),]$bmi =NA
+
+df[(df$insulin==0),]$insulin =NA
+
+df$which.na <- rowSums(is.na(df)) > 0
+
+lm.logistic.reduced <- glm(which.na ~ test, family = binomial, df)
+summary(lm.logistic.reduced)
+
+```
+
+We see that test is significant at a level of  $\alpha =0.3$ if this were closer to $0.2$ we'd begin to wonder if there was something to investigate. This test is reasonable to execute because there may be latent variables related to the test outcome that are represented in the missing value distribution. One could imagine that insulin is hard to measure in some cases that may be related to the disease status. Likewise with the other predictors. 
+
+
+
+### (g) Using the last fitted model of the previous question, what is the difference in the odds of testing positive for diabetes for a woman with a BMI at the first quartile compared with a woman at the third quartile, assuming that all other factors are held constant? Give a confidence interval for this difference. 
+
+```{r}
+df <- na.exclude(df)
+lm.logistic.bss <- glm(test ~ glucose +bmi +  diabetes + age, family = binomial, df)
+summary(lm.logistic.bss)
+```
+
+We know that a unit change in $bmi$ yields a change in the odds ration of $exp(\beta_{bmi})$ - if all other predictors are held constant. Now we calculate the quartiles.
+
+```{r, echo=TRUE}
+q1 <- quantile(df$bmi,.25)
+
+q3 <- quantile(df$bmi,.75)
+
+dx <- q3-q1
+
+odds.ration.change <- exp(lm.logistic.bss$coefficients["bmi"])*dx
+
+pander(data.frame(odds.ration.change))
+```
+We see that if all other predictors are held constant - and the BMI changes from the first quratile to the third quartile, the odds ratio changes by a factor of 9.372. Making the probability of a positive test 9.372 times more likely. 
+
+### (h) Do women who test positive have higher diastolic blood pressures? Is the diastolic blood pressure significant in the regression model? Explain the distinction between the two questions and discuss why the answers are only apparently contradictory.
+ 
+In the full model diastolic is not significant. This may be due to colliniearity. Let's plot the feature first.  
+
+
+```{r}
+boxplot(diastolic~ as.factor(test),na.exclude(df))
+```
+ 
+
+We see evidence in the boxplot that elevated diastolic is associated with a positive test result.  Let's create a univariate model to see.
+
+```{r}
+
+lm.logistic.diastolic <- glm(test ~ diastolic, family = binomial, df.na.removed)
+summary(lm.logistic.diastolic)
+```
+Indeed we have confirmation of a relationship between the test and diastolic.
+
+## 4.1 chredlin data snalysis 
+
+The Chicago insurance dataset found in chredlin concerns the problem of redlining in insurance. Read the help page for background. Use involact as the response and ignore volact. 
+
+```{r}
+rm(list = ls())
+library(faraway)
+data("chredlin", package="faraway")
+df <- chredlin
+```
+
+
+### (a) Plot a histogram of the distribution of involact taking care to choose the bin width to illustrate the issue with zero values. What fraction of the responses is zero? 
+
+```{r}
+hist(df$involact,breaks = 40)
+```
+
+We see the proportion of zeroes is ```r 15/nrow(df)```  Interestingly, setting freq=FALSE and using breaks did not work as expected with the ```hist``` function. We'll revisit this if there is time.  
+
+### (b) Fit a Gaussian linear model with involact as the response with the other five variables as predictors. Use a log transformation for income. Describe the relationship between these predictors and the response. 
+
+```{r}
+
+lm.fit <- lm(involact ~ race+fire+theft+age+ log(income) +side,df)
+summary(lm.fit)
+
+```
+
+All but two of the predictors are significant in this model.
+
+### (c) Plot the residuals against the fitted values. How are the zero response values manifested on the plot? What impact do these cases have on the interpretation of the plot? 
+
+
+```{r}
+plot(fitted(lm.fit),residuals(lm.fit),xlab="Fitted",ylab="Residuals")
+```
+The residuals for the zero response have values have a linear association.
+
+### (d) Create a binary response variable which distinguishes zero values of involact. Fit a logistic regression model with this response but with the same five predictors. What problem occurred during this fit? Explain why this happened. 
+
+```{r}
+binary.response <- as.factor(df$involact ==0)
+df$involact.binary <- binary.response
+lm.fit.logistic <- glm(involact.binary ~ race+fire+theft+age+ log(income) +side , family = binomial, df)
+summary(lm.fit.logistic)
+```
+
+We suspect we have perfect class separation which causes instability in the model fitting procedure. We plotted a whole bunch of 2d predictor combinations looking for this but did not encounter it.  Some are below. We did not try all combinations, and some came very close.  We know that if even one point crosses the linear separating hyperplane then the fitting algorithm should converge.  
+
+```{r}
+# (p <- ggplot(df, aes(x=race, y=fire, color=involact.binary))  +geom_point())
+# 
+(p <- ggplot(df, aes(x=race, y=theft, color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=race, y=age, color=involact.binary))  +geom_point())
+# 
+(p <- ggplot(df, aes(x=race, y=log(income), color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=race, y=side, color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=fire, y=theft, color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=fire, y=age, color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=fire, y=log(income), color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=fire, y=side, color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=theft, y=age, color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=theft, y=side, color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=age, y=log(income), color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=log(income), y=side, color=involact.binary))  +geom_point())
+# 
+# (p <- ggplot(df, aes(x=log(income), y=race, color=involact.binary))  +geom_point())
+
+```
+
+### (e) Fit a smaller model using only race and age. Interpret the z-statistics. Test for the signficance of the two predictors using the difference-in-deviances test. Which test for the significance of the predictors should be preferred? 
+
+```{r}
+lm.fit.logistic.reduced <- glm(involact.binary ~ race+age , family = binomial, df)
+summary(lm.fit.logistic.reduced)
+```
+The p-values indicate that all predictors are significant at a level of $\alpha=0.1$ or below. 
+
+
+### (f) Make plot of race against age which also distinguishes the two levels of the response variable. Interpret the plot and connect it to the previous model output. 
+
+```{r}
+(p <- ggplot(df, aes(x=race, y=age, color=involact.binary))  +geom_point())
+```
+
+
+### (g) Refit the logit model but use a probit link. Compare the model output between the logit and probit models. Which parts are similar and which parts differ substantively? Plot the predicted values on the probability scale against each other and comment on what you see.
+
+
+
+```{r}
+lm.fit.probit <- glm(involact.binary ~ race+ age , family = binomial(link=probit), df)
+summary(lm.fit.probit)
+```
+We fit $involact.binary \sim race+ age$ with binomial family and probit link.  We will now show the relationship between the logistic and probit models
+
+```{r}
+pred.probit <- fitted(lm.fit.probit)
+nu.probit <-coef(lm.fit.probit)[1]+coef(lm.fit.probit)[2]*df$race+coef(lm.fit.probit)[3]*df$age
+
+pred.logistic <-fitted(lm.fit.logistic.reduced)
+nu.logistic <-(coef(lm.fit.logistic.reduced)[1]+coef(lm.fit.logistic.reduced)[2]*df$race+coef(lm.fit.logistic.reduced)[3]*df$age)
+
+
+plot(nu.logistic,pred.logistic, pch = "*",col='red',xlab = "nu", ylab = "p")
+points(nu.probit,pred.probit, pch="+", col="blue")
+legend("topleft", title.col = "black",c("logistic","probit" ),text.col =c("red","blue"),text.font = 1, cex = 1)
+
+```
+
+
+
+
+
+
+
+
+
 
