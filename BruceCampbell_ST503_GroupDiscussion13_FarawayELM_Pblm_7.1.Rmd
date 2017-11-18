@@ -1,5 +1,5 @@
 ---
-title: "NCSU ST 503 Discussion 123
+title: "NCSU ST 503 Discussion 13"
 subtitle: "Probem  7.1 Faraway, Julian J. Extending the Linear Model with R: Generalized Linear, Mixed Effects and Nonparametric Regression Models CRC Press."
 author: "Bruce Campbell"
 fontsize: 12pt
@@ -39,8 +39,6 @@ df <- hsb
 xtabs( ~ prog + gender, df)
 
 xtabs( ~ prog + ses, df)
-
-
 ```
 
 
@@ -96,10 +94,13 @@ The s.e. for the combined subject variable is much lower than the single subjet 
 
 ### (f) Use a stepwise method to reduce the model. Which variables are in your selected model? 
 
-```{r}
+```{r,results='hide',fig.keep='all'}
 library(leaps) 
 
-multinomial.fit.step <- step(sum.subj.multinomial.fit, trace=0)
+invisible(multinomial.fit.step <- step(sum.subj.multinomial.fit, trace=0))
+```
+
+```{r}
 summary(multinomial.fit.step )
 ```
 
@@ -109,31 +110,27 @@ We see that there are 3 variables in the best model : $ses + schtyp + sum.subjec
 
 
 ```{r}
-math.levels <- 33:75
-n <- length(math.levels)
-id.mean <- mean(df$id)
-write.mean <- mean(df$write)
-read.mean <- mean(df$read)
-math.mean <- mean(df$math)
-science.mean <- mean(df$science)
-socst.mean <- mean(df$socst)
+math <- 33:75
+n <- length(math)
+id <- rep(times=n,mean(df$id))
+write <- rep(times=n,mean(df$write))
+read <- rep(times=n,mean(df$read))
+science <- rep(times=n,mean(df$science))
+socst <- rep(times=n,mean(df$socst))
 
-gender.mode <-names(which.max(table(df$gender)))
-race.mode <- names(which.max(table(df$race)))
-schtyp.mode <- names(which.max(table(df$schtyp)))
-prog.mode <- names(which.max(table(df$prog)))
-ses.mode <- names(which.max(table(df$ses)))
-# 
-# df.math.range <-
-# preds <- data.frame(math=math.levels,predict(multinomial.fit.step,df.math.range,type="probs")) 
-# library(tidyr) 
-# lpred <- gather(preds, party, probability, -income) 
-# ggplot(lpred, aes(x=income,y=probability,group=party,linetype=party))+ , geom_line()
+gender <-as.factor(rep(times=n,names(which.max(table(df$gender)))))
+race <- as.factor(rep(times=n,names(which.max(table(df$race)))))
+schtyp <- as.factor(rep(times=n,names(which.max(table(df$schtyp)))))
+prog <- as.factor(rep(times=n,names(which.max(table(df$prog)))))
+ses <- as.factor(rep(times=n,names(which.max(table(df$ses)))))
 
+df.math.range  <- data.frame(id,write,read,math,science,socst,gender,race,schtyp,ses)
+
+preds <- data.frame(math=math,predict(multinomial.fit,df.math.range,type="probs")) 
+library(tidyr) 
+lpred <- gather(preds, prog, probability, -math) 
+ggplot(lpred, aes(x=math,y=probability,group=prog,linetype=prog))+  geom_line()
 ```
-
-
-
 
 
 
