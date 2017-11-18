@@ -1,0 +1,142 @@
+---
+title: "NCSU ST 503 Discussion 123
+subtitle: "Probem  7.1 Faraway, Julian J. Extending the Linear Model with R: Generalized Linear, Mixed Effects and Nonparametric Regression Models CRC Press."
+author: "Bruce Campbell"
+fontsize: 12pt
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(tidy=TRUE)
+knitr::opts_chunk$set(prompt=FALSE)
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_knit$set(root.dir = ".")
+library(latex2exp)   
+library(pander)
+library(ggplot2)
+library(GGally)
+```
+
+## 7.1 
+
+The hsb data was collected as a subset of the High School and Beyond study conducted by the National Education Longitudinal Studies program of the National Center for Education Statistics. The variables are gender; race; socioeconomic status (SES); school type; chosen high school program type; scores on reading, writing, math, science, and social studies. We want to determine which factors are related to the choice of the type of program - academic, vocational or general - that the students pursue in high school. The response is multinomial with three levels. 
+
+### (a) Make a table showing the proportion of males and females choosing the three different programs. Comment on the difference. Repeat this comparison but for SES rather than gender. 
+```{r}
+rm(list = ls())
+library(faraway)
+data("hsb", package="faraway")
+df <- hsb
+
+xtabs( ~ prog + gender, df)
+
+xtabs( ~ prog + ses, df)
+
+
+```
+
+
+### (b) Construct a plot like the right panel of Figure 7.1 that shows the relationship between program choice and reading score. Comment on the plot. Repeat for math in place of reading. 
+
+```{r}
+library(dplyr)
+egp <- group_by(df, prog,read) %>% summarise(count=n()) %>% group_by(prog) %>% mutate(etotal=sum(count), proportion=count/etotal)
+ggplot(egp, aes(x=read, y=proportion, group=prog, linetype=prog))+geom_line()
+```
+
+```{r}
+egp <- group_by(df, prog,math) %>% summarise(count=n()) %>% group_by(prog) %>% mutate(etotal=sum(count), proportion=count/etotal)
+ggplot(egp, aes(x=math, y=proportion, group=prog, linetype=prog))+geom_line()
+```
+
+### (c) Compute the correlation matrix for the five subject scores. 
+
+```{r}
+df.subjects <- df[,which(names(df) %in% c("read","write","math","science","socst")),]
+
+corr.subjects <- cor(df.subjects)
+
+pander(corr.subjects)
+
+heatmap(corr.subjects,main="Heatmap : academic subject correlation")
+```
+
+### (d) Fit a multinomial response model for the program choice and examine the fitted coefficients. Of the five subjects, one gives unexpected coefficients. Identify this subject and suggest an explanation for this behavior. 
+
+```{r}
+library(nnet) 
+multinomial.fit <- multinom(prog ~ . , df)
+summary(multinomial.fit)
+```
+
+
+### (e) Construct a derived variable that is the sum of the five subject scores. Fit a multinomial model as before except with this one sum variable in place of the five subjects separately. Compare the two models to decide which should be preferred. 
+
+```{r}
+sum.subject <- rowSums(df.subjects)
+
+df.reduced <- df[, which(colnames(df) %in% c( "prog","id","gender","race","ses","schtyp","sum.subject"  ))]
+
+df.reduced$sum.subject <-  sum.subject
+
+sum.subj.multinomial.fit <- multinom(prog ~id +gender +race +ses +schtyp+ sum.subject  ,df.reduced)
+
+summary(sum.subj.multinomial.fit)
+```
+
+The s.e. for the combined subject variable is much lower than the single subjet variables. We suspect colliniearity may be the cause. 
+
+### (f) Use a stepwise method to reduce the model. Which variables are in your selected model? 
+
+```{r}
+library(leaps) 
+
+multinomial.fit.step <- step(sum.subj.multinomial.fit, trace=0)
+summary(multinomial.fit.step )
+```
+
+We see that there are 3 variables in the best model : $ses + schtyp + sum.subjec$ 
+
+### (g) Construct a plot of predicted probabilities from your selected model where the math score varies over the observed range. Other predictors should be set at the most common level or mean value as appropriate. Your plot should be similar to Figure 7.2. Comment on the relationship.
+
+
+```{r}
+math.levels <- 33:75
+n <- length(math.levels)
+id.mean <- mean(df$id)
+write.mean <- mean(df$write)
+read.mean <- mean(df$read)
+math.mean <- mean(df$math)
+science.mean <- mean(df$science)
+socst.mean <- mean(df$socst)
+
+gender.mode <-names(which.max(table(df$gender)))
+race.mode <- names(which.max(table(df$race)))
+schtyp.mode <- names(which.max(table(df$schtyp)))
+prog.mode <- names(which.max(table(df$prog)))
+ses.mode <- names(which.max(table(df$ses)))
+# 
+# df.math.range <-
+# preds <- data.frame(math=math.levels,predict(multinomial.fit.step,df.math.range,type="probs")) 
+# library(tidyr) 
+# lpred <- gather(preds, party, probability, -income) 
+# ggplot(lpred, aes(x=income,y=probability,group=party,linetype=party))+ , geom_line()
+
+```
+
+
+
+
+
+
+
+
+
