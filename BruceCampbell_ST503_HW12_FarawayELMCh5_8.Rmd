@@ -1,0 +1,207 @@
+---
+title: "NCSU ST 503 HW 12"
+subtitle: "Probem  5.1,8.5,8.6 Faraway, Julian J. Extending the Linear Model with R CRC Press."
+author: "Bruce Campbell"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+fontsize: 12pt
+header-includes:
+   - \usepackage{bbm}
+output: pdf_document
+---
+
+---
+```{r setup, include=FALSE,echo=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(fig.height=5)
+knitr::opts_chunk$set(fig.width=7)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(message=FALSE)
+library(pander)
+library(faraway)
+library(ggplot2)
+```
+
+## # 1 from Chapter 5.
+Complete exercises # 5 (a - d) and # 6 (a, b, d - f)) from Chapter 8
+
+
+## 5.1 discoveries analysis 
+
+The dataset discoveries lists the numbers of "great" inventions and scientific discoveries in each year from 1860 to 1959. 
+
+### (a) Plot the discoveries over time and comment on the trend, if any. 
+
+```{r}
+rm(list = ls())
+library(faraway)
+data("discoveries", package="faraway")
+df <- discoveries
+plot(df)
+```
+
+### (b) Fit a Poisson response model with a constant term. Now compute the mean number of discoveries per year. What is the relationship between this mean and the coefficient seen in the model? 
+
+```{r}
+ddf <- data.frame(df)
+model.pois <- glm(df ~ 1, family=poisson, ddf) 
+sumary(model.pois)
+pander(data.frame(lambda.hat =mean(df)))
+```
+Our model is $Y_i \sim Pois(\mu_i)$ , $log(\mu_i)=x^\intercal \beta$ and we have that $e^{\beta_0} \sim \hat{\lambda}$ 
+
+### (c) Use the deviance from the model to check whether the model fits the data. What does this say about whether the rate of discoveries is constant over time? 
+
+The deviance $D \sim \chi^2_{n-1}$ is significant and we conclude the null model is not a good fit for the data.  We can conclude - and see in the plot - where the rate changes over time.  
+
+### (d) Make a table of how many years had zero, one, two, three, etc. discoveries. Collapse eight or more into a single category. Under an appropriate Poisson distribution, calculate the expected number of years with each number of discoveries. Plot the observed against the expected using a different plotting character to denote the number of discoveries. How well do they agree? 
+
+```{r,echo=TRUE}
+tbl <- table(df)
+tt <- tbl[1:9]
+sumover8 <- sum(tbl[9:length(tbl)])
+tt[9] <- sumover8
+
+pander(tt, caption = "freqss")
+
+propo <- tt /sum(tt)
+
+pander(propo, caption = "proportion")
+
+lambda <- sum(0:8 * propo)
+
+expected <- dpois(0:8,lambda = lambda)
+
+#n=1000000
+#sum(0:n * dpois(0:n,lambda = lambda))
+
+pander(data.frame(t(expected)), caption = "expected")
+
+dfp <-data.frame(count=as.factor(0:8),propo,expected)
+
+(p <- ggplot(dfp, aes(x=Freq, y=expected, shape=count)) +geom_point()+ scale_shape_manual(values=1:nlevels(dfp$count)))
+
+```
+
+### (e) Use the Pearson's Chi-squared test to check whether the observed numbers are consistent with the expected numbers. Interpret the result. 
+
+We have to deal with the fact that we binned the counts $9:\infty$
+```{r}
+
+observed <- tt
+
+elast <- 1- sum(dpois(0:8,lambda = lambda))
+
+ee <- expected
+ee[8]<- elast
+expected.counts <- ee*sum(tt) 
+
+ctbl <-data.frame(observed,expected.counts)
+ctbl$df <- NULL
+chisq.test(ctbl)
+```
+We have evidence that the observed numbers are cinsistent with the expected numbers
+
+### (f) Fit a Poisson response model that is quadratic in the year. Test for the signifiance of the quadratic term. What does this say about the presence of a trend in discovery? 
+
+```{r}
+ddf <- data.frame(time=1:length(df),df)
+model.pois <- glm(df ~ I(time^2), family=poisson, ddf) 
+sumary(model.pois)
+```
+
+This model confirms our observation that the rate changes
+
+### (g) Compute the predicted number of discoveries each year and show show these predictions as a line drawn over the data. Comment on what you see.
+
+```{r}
+plot(ddf$time,ddf$df,col=2)
+points(ddf$time,fitted(model.pois),col=1)
+```
+We note the rate does change over time in concordance with the data except for a small period of exceptional discovery early in the series. 
+
+
+
+## 8.5 Galapagos 
+
+Again using the Galápagos data, fit a Poisson model to the species response with the five geographic variables as predictors. Do not use the endemics variable. The purpose of this question is to compare six different ways of testing the significance of the elevation predictor, i.e., $H0: \beta_{Elev} = 0$. In each case, report the p-value. 
+
+
+### (a) Use the z-statistic from the model summary. 
+
+```{r}
+rm(list = ls())
+library(faraway)
+data("gala", package="faraway")
+df <- gala
+model.pois <- glm( Species~ Area+Elevation+Nearest+Scruz+Adjacent, family=poisson, df) 
+sumary(model.pois)
+```
+The p-value is ``` < 2.2e-16```
+
+### (b) Fit a model without elevation and use the difference in deviances to make the test. 
+
+```{r}
+model.pois.reduced <- glm( Species~ Area+Nearest+Scruz+Adjacent, family=poisson, df) 
+sumary(model.pois.reduced)
+
+```
+
+Our test statistic is $\frac{(2389.56888 - 716.84577)}{ \hat{\phi}}$
+
+We need to estimate $\phi$
+
+```{r}
+(dp <- sum(residuals(model.pois,type="pearson")^2)/model.pois$df.res)
+
+```
+
+### (c) Use the Pearson Chi-squared statistic in place of the deviance in the previous test. 
+
+```{r}
+anova(model.pois,test="Chi")
+```
+Again the p-value for $Elevation$ is ```< 2.2e-16```
+
+### (d) Fit the Poisson model with a free dispersion parameter as described in Section 5.2. Make the test using the model summary. 
+
+```{r}
+sumary(model.pois,dispersion=dp)
+
+```
+
+The p-value for $Elevation$ is ```6.530e-13``` so the pvalue is 0.001511532
+
+### (e) Use the sandwich estimation method for the standard errors in the original model. Use these to compute z-statistics. 
+
+```{r}
+library(sandwich) 
+
+(sebeta <- sqrt(diag(vcovHC(model.pois))))
+```
+
+
+our z-value is ```3.5406e-03/0.0011939774``` which yields a pvalue of
+
+### (f) Use the robust GLM estimation method and report the test result from the summary. 
+
+```{r}
+library(robust) 
+rmodpla <- glmRob(Species~ log(Area)+log(Elevation)+Nearest+Scruz+Adjacent, family=poisson, data=gala) 
+summary(rmodpla)
+
+```
+
+No clue why this would not converge unless I log transformed elevation and area! 
+
+
+### (g) Compare all six results. Pick the best one and justify your choice.
+
+unfinished :( 
+
+
+
+
+
+
